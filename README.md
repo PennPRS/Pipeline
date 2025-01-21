@@ -51,21 +51,20 @@ install.packages(c('RISCA','optparse','bigreadr','bigsnpr','bigparallelr', 'bigm
 ## PRS method options
 PennPRS supports the following PRS pseudo-training and tuning-parameter-free methods. Please navigate to the Wiki page for the implementation of each of the methods.
 
-- [Single-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/2.-Single-Ancestry-PRS-Modeling)<summary>
-    1. C+T-pseudo
-    2. Lassosum2-pseudo
-    3. LDpred2-pseudo
-    4. Ensemble PRS combining PRS trained by different methods
-    5. PRS-CS
-    6. PRS-CS-auto
-    7. LDpred2-auto
-    8. DBSLMM
+[Single-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/2.-Single%E2%80%90Ancestry-PRS-Modeling)
+  1. C+T-pseudo
+  2. Lassosum2-pseudo
+  3. LDpred2-pseudo
+  4. Ensemble PRS combining PRS trained by different methods
+  5. PRS-CS
+  6. PRS-CS-auto
+  7. LDpred2-auto
+  8. DBSLMM
     
-- [Multi-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/3.-Multi-Ancestry-PRS-Modeling)<summary>
-
-    9. PROSPER 
-    10. MUSSEL 
-    11. PRS-CSx 
+[Multi-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/3.-Multi%E2%80%90Ancestry-PRS-Modeling-with-Pseudo%E2%80%90Training-Methods)
+  9. PROSPER 
+  10. MUSSEL 
+  11. PRS-CSx 
 
 ## Contact
 Please report questions and bugs on the Issues page or contact us at pennprs@googlegroups.com.
