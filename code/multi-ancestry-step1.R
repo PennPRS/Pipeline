@@ -205,11 +205,11 @@ partitions <- opt$partitions
 
 # ----------------
 PUMAS_path = paste0(PennPRS_path,'/code/')
-PROSPER_path = paste0(PennPRS_path, 'software/PROSPER')
+PROSPER_path = paste0(PennPRS_path, '/software/PROSPER')
 path_plink = '/dcl01/chatterj/data/jin/software/plink2'
-PRScs_path = paste0(PennPRS_path, 'software/PRScs/')
-PRScsx_path = paste0(PennPRS_path, 'software/PRScsx/')
-MUSSEL_path = paste0(PennPRS_path, 'software/MUSSEL/')
+PRScs_path = paste0(PennPRS_path, '/software/PRScs/')
+PRScsx_path = paste0(PennPRS_path, '/software/PRScsx/')
+MUSSEL_path = paste0(PennPRS_path, '/software/MUSSEL/')
 threads = 1
 
 ld_path <- paste0(PennPRS_path, '/LD/', races, '/')

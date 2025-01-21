@@ -105,7 +105,7 @@ partitions <- opt$partitions
 
 ld_path <- paste0(PennPRS_path, '/LD/', race, '/')
 PUMAS_path = paste0(PennPRS_path,'/code/')
-plink_path = paste0(PennPRS_path, 'software/')
+plink_path = paste0(PennPRS_path, '/software/')
 threads = 1
 
 
