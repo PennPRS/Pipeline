@@ -8,7 +8,7 @@ To use the tool, please follow the instructions in **[the Wiki page](https://git
 
 
 ## Version History
-- [ ] __January, 2025:__  The PennPRS offline pipeline was made available on Github.
+- [ ] __January 2025:__  The PennPRS offline pipeline was made available on Github.
 </br>
 
 
@@ -56,7 +56,7 @@ PennPRS supports the following PRS pseudo-training and tuning-parameter-free met
   2. Lassosum2-pseudo
   3. LDpred2-pseudo
   4. Ensemble PRS combining PRS trained by different methods
-  5. PRS-CS
+  5. PRS-CS-pseudo
   6. PRS-CS-auto
   7. LDpred2-auto
   8. DBSLMM
