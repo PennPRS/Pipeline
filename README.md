@@ -2,7 +2,7 @@
 
 [PennPRS](https://pennprs.org/) is a cloud-based platform dedicated to online PRS model training without requiring individual-level data for parameter optimization. On this Github page, we provide an offline version of PennPRS. 
 
-To use the tool, please follow the instructions in **[the Wiki page](https://github.com/Jin93/PennPRS-Offline-Pipeline/wiki)**.
+To use the tool, please follow the instructions in **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)**.
 </br>
 
 
@@ -15,7 +15,7 @@ To use the tool, please follow the instructions in **[the Wiki page](https://git
 
 ## Getting Started
 
-To install the PennPRS Offline Pipeline, please clone the Github repository by `git clone https://github.com/Jin93/PennPRS-Offline-Pipeline.git` and rename the unzipped folder as `/PennPRS/`.
+To install the PennPRS Offline Pipeline, please clone the Github repository by `git clone https://github.com/PennPRS/Pipeline.git` and rename the unzipped folder as `/PennPRS/`.
 
 Download LD reference data files for different populations and save the uncompressed folder(s) in `/PennPRS/LD/`.
 
@@ -51,7 +51,7 @@ install.packages(c('RISCA','optparse','bigreadr','bigsnpr','bigparallelr', 'bigm
 ## PRS method options
 PennPRS supports the following PRS pseudo-training and tuning-parameter-free methods. Please navigate to the Wiki page for the implementation of each of the methods.
 
-- [Single-Ancestry PRS Modeling](https://github.com/Jin93/PennPRS-Offline-Pipeline/wiki/2.-Single-Ancestry-PRS-Modeling)<summary>
+- [Single-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/2.-Single-Ancestry-PRS-Modeling)<summary>
     1. C+T-pseudo
     2. Lassosum2-pseudo
     3. LDpred2-pseudo
@@ -61,7 +61,7 @@ PennPRS supports the following PRS pseudo-training and tuning-parameter-free met
     7. LDpred2-auto
     8. DBSLMM
     
-- [Multi-Ancestry PRS Modeling](https://github.com/Jin93/PennPRS-Offline-Pipeline/wiki/3.-Multi-Ancestry-PRS-Modeling)<summary>
+- [Multi-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/3.-Multi-Ancestry-PRS-Modeling)<summary>
 
     9. PROSPER 
     10. MUSSEL 
