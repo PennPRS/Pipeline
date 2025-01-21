@@ -62,6 +62,7 @@ PennPRS supports the following PRS pseudo-training and tuning-parameter-free met
   8. DBSLMM
     
 [Multi-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/3.-Multi%E2%80%90Ancestry-PRS-Modeling-with-Pseudo%E2%80%90Training-Methods)
+
   9. PROSPER 
   10. MUSSEL 
   11. PRS-CSx 
