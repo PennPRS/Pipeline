@@ -63,9 +63,9 @@ PennPRS supports the following PRS pseudo-training and tuning-parameter-free met
     
 [Multi-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/3.-Multi%E2%80%90Ancestry-PRS-Modeling-with-Pseudo%E2%80%90Training-Methods)
 
-  9. PROSPER 
-  10. MUSSEL 
-  11. PRS-CSx 
+  9. PROSPER-pseudo 
+  10. MUSSEL-pseudo 
+  11. PRS-CSx-pseudo 
 
 ## Contact
 Please report questions and bugs on the Issues page or contact us at pennprs@googlegroups.com.
