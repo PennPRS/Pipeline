@@ -326,8 +326,6 @@ if ('DBSLMM' %in% methods){
   # ---------------------------------------------------------------------------------
   # --------------------- Step 1.1: Input preparation for DBSLMM --------------------
 
-  # Reformat summary data to use as the input data for PRS-CS-auto:
-  # chr rs  ps  n_mis   n_obs   allele1 allele0 af  beta    se  p_wald
   gwasinput = paste0(workdir, 'sumdata/',trait_name,'.txt')
   if (!file.exists(gwasinput)) print(paste0('A valid GWAS summary data file is missing.'))
   if (file.exists(gwasinput)){

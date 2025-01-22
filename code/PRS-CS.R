@@ -79,7 +79,7 @@ ld_path <- paste0(PennPRS_path, '/LD/', race, '/')
 PUMAS_path = paste0(PennPRS_path,'/code/')
 PRScs_path = paste0(PennPRS_path, 'software/PRScs/')
 plink_path = paste0(PennPRS_path, 'software/')
-PATH_TO_REFERENCE = paste0(PRScs_path,'ref/ldblk_1kg_',tolower(race)) # We can use 1000 Genomes reference data for now
+PATH_TO_REFERENCE = paste0(PennPRS_path,'/LD/', race, '/ldblk_1kg_',tolower(race)) # We can use 1000 Genomes reference data for now
 threads = 1
 
 
@@ -609,7 +609,7 @@ if ('auto' %in% type){
     }
     
     # --------------------- Step 1.2: Run PRS-CS-auto ---------------------
-    PATH_TO_REFERENCE = paste0(PRScs_path, 'LDref/ldblk_1kg_',tolower(race)) # We can use 1000 Genomes reference data for now
+    # PATH_TO_REFERENCE = paste0(PRScs_path, 'LDref/ldblk_1kg_',tolower(race)) # We can use 1000 Genomes reference data for now
     SEED = 2023
     # Can we submit 22 separate jobs to server and run them in parallel? 
     # Each of the 22 prscscode job should only require <1.5G memory.
