@@ -19,15 +19,15 @@ To install the PennPRS Offline Pipeline, please clone the Github repository by `
 
 Download LD reference data files for different populations and save the uncompressed folder(s) in `/PennPRS/LD/`.
 
-[EUR LD information](https://www.dropbox.com/scl/fi/r3cwscxycfbgaxb4slh1d/EUR.tar.gz?rlkey=2um75zag5sgzpb82xbr504qhc&st=34n1hx12&dl=0) (~30.46G), decompress by `tar -zxvf EUR.tar.gz`
+[EUR LD information](https://www.dropbox.com/scl/fi/h3sv4l0wh36ki2lrmektl/EUR.tar.gz?rlkey=4ndd32swtbx1uo2awjv79a9mm&st=t3169p1q&dl=0) (~35.02G), decompress by `tar -zxvf EUR.tar.gz`
 
-[AFR LD information](https://www.dropbox.com/scl/fi/zhlpeuaiqjbt1azx0r67h/AFR.tar.gz?rlkey=zflny7tra9bku3e24xehlcak3&st=f7it0p9o&dl=0) (~39.68G), decompress by `tar -zxvf AFR.tar.gz`
+[AFR LD information](https://www.dropbox.com/scl/fi/ljmyncadxpehnx7j1scli/AFR.tar.gz?rlkey=13bb3qer2zt7s95cb377yexd7&st=tbjcnf4a&dl=0) (~44.12G), decompress by `tar -zxvf AFR.tar.gz`
 
-[AMR LD information](https://www.dropbox.com/scl/fi/54uxowqs5qhkbe9t776rc/AMR.tar.gz?rlkey=vqw0j78tyrqo6jgymiwevh9q9&st=vtqur2ws&dl=0) (~36.36G), decompress by `tar -zxvf AMR.tar.gz`
+[AMR LD information](https://www.dropbox.com/scl/fi/8f2i8l7f49tuarpfmsmzq/AMR.tar.gz?rlkey=lgxm7gr5sekedqx7ku1sw3yg0&st=7rvphfcj&dl=0) (~40.17G), decompress by `tar -zxvf AMR.tar.gz`
 
-[EAS LD information](https://www.dropbox.com/scl/fi/s0a6mqpi14qdqvop871mg/EAS.tar.gz?rlkey=jeodg6upmbi2kifuk9iijrjvg&st=3djfh3fx&dl=0) (~23.20G), decompress by `tar -zxvf EAS.tar.gz`
+[EAS LD information](https://www.dropbox.com/scl/fi/3zg2zdv9o8txmhbj2vzdb/EAS.tar.gz?rlkey=56r4dieiqzu52knnjlphxkjll&st=wchdvytz&dl=0) (~25.68G), decompress by `tar -zxvf EAS.tar.gz`
 
-[SAS LD information](https://www.dropbox.com/scl/fi/5b8937g2wb25q2gomvplr/SAS.tar.gz?rlkey=c9c6v7kadansbdee2xnyr297l&st=h3i4di6d&dl=0) (~24.94G), decompress by `tar -zxvf SAS.tar.gz`
+[SAS LD information](https://www.dropbox.com/scl/fi/ki5ar39uzfgbqjor5hy1b/SAS.tar.gz?rlkey=3fcqio7n4w1lmr7c52wjue4ua&st=4e6uzvua&dl=0) (~30.56G), decompress by `tar -zxvf SAS.tar.gz`
 
 
 Before running the pipeline, please consider the following quality control (QC) steps for the GWAS summary data:
