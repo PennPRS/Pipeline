@@ -59,7 +59,9 @@ PennPRS supports the following PRS pseudo-training and tuning-parameter-free met
   5. PRS-CS-auto
   6. LDpred2-auto
   7. DBSLMM
+  
   (We also provide the option to train an ensemble PRS combining PRS trained by a subset of C+T-pseudo, Lassosum2-pseudo, and LDpred2-pseudo)
+  
 [Multi-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/3.-Multi%E2%80%90Ancestry-PRS-Modeling-with-Pseudo%E2%80%90Training-Methods)
 
   8. PROSPER-pseudo 
