@@ -1,6 +1,6 @@
 # PennPRS Offline Pipeline 
 
-[PennPRS](https://pennprs.org/) is a cloud-based platform dedicated to online PRS model training without requiring individual-level data for parameter optimization. On this Github page, we provide an offline version of PennPRS. 
+[PennPRS](https://pennprs.org/) is a cloud-based platform dedicated to online PRS model training without requiring individual-level data for parameter optimization. On this Github page, we provide the offline version of PennPRS that can be downloaded to local servers for large-scale PRS training with various method options. 
 
 To use the tool, please follow the instructions in **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)**.
 </br>
