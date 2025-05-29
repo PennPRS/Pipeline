@@ -68,10 +68,15 @@ PennPRS supports the following PRS pseudo-training and tuning-parameter-free met
   9. MUSSEL-pseudo 
   10. PRS-CSx-pseudo 
 
+## Demo and Runtime Information
+We have provided example GWAS summary datasets and the corresponding outputs can be found in Sections 2.1 - 2.4 in **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)**.
+The average run time for completing a job that runs C+T-pseudo, Lassosum2-pseudo, LDpred2-pseudo, and ensemble PRS for ~1.2 million HapMap3 SNPs using 2 CPUs (with 30 GB RAM) is approximately 2.5 hours, while increasing to 4 CPUs reduced the run time to approximately two hours.
+
 ## Contact
 Please report questions and bugs on the Issues page or contact us at pennprs@googlegroups.com.
 
 
 ## Citation
+Jin, J., Li, B., Wang, X., Yang, X., Li, Y., Wang, R., Ye, C., Shu, J., Fan, Z., Xue, F. and Ge, T., 2025. PennPRS: a centralized cloud computing platform for efficient polygenic risk score training in precision medicine. medRxiv, 2025-02. [Link](https://www.medrxiv.org/content/10.1101/2025.02.07.25321875v1)
 
 
