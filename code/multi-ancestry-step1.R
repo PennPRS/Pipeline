@@ -520,7 +520,8 @@ if ('PROSPER' %in% methods){
   if (!dir.exists(td)) dir.create(td)
   setwd(td)
   tmp <- tempfile(tmpdir = td)
-  
+
+  ld = NULL
   for (chr in 1:22) {
     cat(chr, ".. ", sep = "")
     ## indices in 'df_beta'
@@ -532,7 +533,7 @@ if ('PROSPER' %in% methods){
     if (length(ind.chr3) > 0){
       # corr0
       corr0 <- readRDS(paste0(path_precalLD[race.LD], '/LD_ref_chr', chr, '.rds'))[ind.chr3, ind.chr3]
-      if (chr == 1) {
+      if ((chr == 1) | (is.null(ld))) {
         ld <- Matrix::colSums(corr0^2)
         corr <- as_SFBM(corr0, tmp, compact = TRUE)
       } else {
