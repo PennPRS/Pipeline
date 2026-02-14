@@ -6,12 +6,10 @@ To use the tool, please follow the instructions in **[the Wiki page](https://git
 </br>
 
 
-
 ## Version History
 - [ ] __November 2025:__  Updated code/Tuning-Parameter-Free.R.
 - [ ] __January 2025:__  The PennPRS offline pipeline was made available on Github.
 </br>
-
 
 
 ## Getting Started
@@ -36,6 +34,15 @@ Before running the pipeline, please consider the following quality control (QC) 
 - Only keep the biallelic [HapMap3 SNPs](https://www.dropbox.com/scl/fi/sktcg9u52jw1clvlj9qwx/hapmap3rsid.txt?rlkey=bwfqpqf9br4ptniee4wjd92c4&st=kefhjw6g&dl=0) to avoid troubles caused by reading huge files (e.g., > 8 million SNPs) in R.
 - Remove SNPs with minor allele frequencies (MAF) lower than 1% in all populations.
 - The genetic ancestry for each input GWAS summary data needs to be identified. If the GWAS training samples consist of multiple ancestry groups, please choose the ancestry group with the largest sample size.
+
+## Enviroment Set Up
+
+Create and activate the conda environment so all dependencies are available:
+
+```bash
+conda env create -f environment.yml
+conda activate pennprs
+```
 
 ## Notes
 
@@ -68,6 +75,51 @@ PennPRS supports the following PRS pseudo-training and tuning-parameter-free met
   8. PROSPER-pseudo 
   9. MUSSEL-pseudo 
   10. PRS-CSx-pseudo 
+
+## Query Data with PennPRS
+
+Run `query_data.py` to query data for offline usage. 
+
+```bash
+cd code
+conda activate pennprs
+python query_data.py <source> <trait_id> [options]
+```
+
+**Sources**
+
+- `gwas` — GWAS Catalog: EBI summary statistics; trait IDs (e.g. `GCST...`) must appear in the harmonised list (see [PennPRS data](https://pennprs.org/data)).
+- `finngen` — FinnGen: R12 EUR files; path pattern `EUR_finngen_R12_<phenocode>.txt`. Phenocodes must be in the queryable list (see [PennPRS data](https://pennprs.org/data)).
+
+**Examples**
+
+```bash
+# Resolve GWAS Catalog URL only (no download)
+python query_data.py gwas GCST12345678 --resolve-only
+
+# Resolve and download GWAS Catalog file into default data dir
+python query_data.py gwas GCST12345678 --download
+
+# Resolve FinnGen local path (prints path; exit 1 if file missing)
+python query_data.py finngen F5_DM2
+```
+
+**CLI options**
+
+| Option | Description |
+|--------|-------------|
+| `--resolve-only` | Only print URL/path; do not download (GWAS only). |
+| `--download` | For GWAS: download the file into the data dir. |
+| `--output-dir DIR` | Directory for logs (e.g. `query_data.log`). Default: current directory. |
+| `--harmonised-file PATH` | Path to `harmonised.txt` (GWAS only). Overrides env. |
+| `--gwas-data-dir DIR` | Directory for GWAS downloads. Overrides env. |
+| `--finngen-data-dir DIR` | Base directory for FinnGen files. Overrides env. |
+
+**Exit codes**
+
+- `0` — Success (URL/path printed, or file downloaded).
+- `1` — Trait not found or download failed.
+
 
 ## Demo and Runtime Information
 We have provided example GWAS summary datasets and the corresponding outputs can be found in Sections 2.1 - 2.4 in **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)**.
