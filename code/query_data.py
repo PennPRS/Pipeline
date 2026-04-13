@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # Default paths (override with environment variables if needed)
 DEFAULT_HARMONISED_FILE = os.environ.get(
     "PENNPRS_HARMONISED_FILE",
-    "/home/ubuntu/pennprs/frontend/public/harmonised.txt",
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "harmonised.txt"),
 )
 DEFAULT_GWAS_BASE_URL = "http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/"
 DEFAULT_GWAS_DATA_DIR = os.environ.get("PENNPRS_GWAS_DATA_DIR", "/home/ubuntu/data2/gwas_data/")
