@@ -89,7 +89,10 @@ python query_data.py <source> <trait_id> [options]
 **Sources**
 
 - `gwas` — GWAS Catalog: EBI summary statistics; trait IDs (e.g. `GCST...`) must appear in the harmonised list (see [PennPRS data](https://pennprs.org/data)).
-- `finngen` — FinnGen: R12 EUR files; path pattern `EUR_finngen_R12_<phenocode>.txt`. Phenocodes must be in the queryable list (see [PennPRS data](https://pennprs.org/data)).
+- `finngen` — FinnGen: summary statistics must be **downloaded manually** by the user. Run the command below to get the download instructions and link.
+
+> **FinnGen data download:** Fill out the access form and download the data directly from the FinnGen release page:
+> https://finngen.gitbook.io/documentation/data-download
 
 **Examples**
 
@@ -100,7 +103,7 @@ python query_data.py gwas GCST12345678 --resolve-only
 # Resolve and download GWAS Catalog file into default data dir
 python query_data.py gwas GCST12345678 --download
 
-# Resolve FinnGen local path (prints path; exit 1 if file missing)
+# Print FinnGen manual download instructions and link
 python query_data.py finngen F5_DM2
 ```
 
@@ -108,16 +111,15 @@ python query_data.py finngen F5_DM2
 
 | Option | Description |
 |--------|-------------|
-| `--resolve-only` | Only print URL/path; do not download (GWAS only). |
+| `--resolve-only` | Only print URL; do not download (GWAS only). |
 | `--download` | For GWAS: download the file into the data dir. |
 | `--output-dir DIR` | Directory for logs (e.g. `query_data.log`). Default: current directory. |
 | `--harmonised-file PATH` | Path to `harmonised.txt` (GWAS only). Overrides env. |
 | `--gwas-data-dir DIR` | Directory for GWAS downloads. Overrides env. |
-| `--finngen-data-dir DIR` | Base directory for FinnGen files. Overrides env. |
 
 **Exit codes**
 
-- `0` — Success (URL/path printed, or file downloaded).
+- `0` — Success (URL printed, file downloaded, or FinnGen link displayed).
 - `1` — Trait not found or download failed.
 
 

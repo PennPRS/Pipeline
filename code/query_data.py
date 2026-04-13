@@ -1,5 +1,8 @@
 """
-Query data utilities for PennPRS: resolve and download GWAS Catalog and FinnGen summary statistics.
+Query data utilities for PennPRS: resolve and download GWAS Catalog summary statistics.
+
+FinnGen summary statistics must be downloaded manually from:
+  https://finngen.gitbook.io/documentation/data-download
 """
 
 import os
@@ -17,11 +20,8 @@ DEFAULT_HARMONISED_FILE = os.environ.get(
 )
 DEFAULT_GWAS_BASE_URL = "http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/"
 DEFAULT_GWAS_DATA_DIR = os.environ.get("PENNPRS_GWAS_DATA_DIR", "/home/ubuntu/data2/gwas_data/")
-DEFAULT_FINNGEN_DATA_DIR = os.environ.get(
-    "PENNPRS_FINNGEN_DATA_DIR", "/home/ubuntu/data2/finn12_data/"
-)
-FINNGEN_FILE_PREFIX = "EUR_finngen_R12_"
-FINNGEN_FILE_SUFFIX = ".txt"
+
+FINNGEN_DOWNLOAD_URL = "https://finngen.gitbook.io/documentation/data-download"
 
 
 def get_query_path(
@@ -55,50 +55,6 @@ def get_query_path(
             if len(parts) >= 2 and trait_id == parts[1]:
                 return DEFAULT_GWAS_BASE_URL + line
     return None
-
-
-def get_finngen_trait_path(
-    trait_id: str,
-    data_dir: Optional[str] = None,
-    prefix: Optional[str] = None,
-    suffix: Optional[str] = None,
-) -> str:
-    """
-    Build the local file path for a FinnGen trait (R12 EUR summary statistics).
-
-    Does not check whether the file exists; use os.path.exists() if needed.
-
-    Args:
-        trait_id: FinnGen phenocode.
-        data_dir: Base directory for FinnGen data. Defaults to PENNPRS_FINNGEN_DATA_DIR or built-in default.
-        prefix: Filename prefix (default EUR_finngen_R12_).
-        suffix: Filename suffix (default .txt).
-
-    Returns:
-        Absolute path to the expected summary statistics file.
-    """
-    base = data_dir or DEFAULT_FINNGEN_DATA_DIR
-    pre = prefix if prefix is not None else FINNGEN_FILE_PREFIX
-    suf = suffix if suffix is not None else FINNGEN_FILE_SUFFIX
-    return os.path.join(base, f"{pre}{trait_id}{suf}")
-
-
-def finngen_trait_exists(
-    trait_id: str,
-    data_dir: Optional[str] = None,
-) -> bool:
-    """
-    Check whether a FinnGen trait file exists on disk.
-
-    Args:
-        trait_id: FinnGen phenocode.
-        data_dir: Base directory for FinnGen data (optional).
-
-    Returns:
-        True if the file exists.
-    """
-    path = get_finngen_trait_path(trait_id, data_dir=data_dir)
-    return os.path.isfile(path)
 
 
 def download_gwas_catalog_file(
@@ -190,28 +146,6 @@ def resolve_gwas_trait_path(trait_id: str, harmonised_file: Optional[str] = None
     return get_query_path(trait_id, harmonised_file=harmonised_file)
 
 
-def resolve_finngen_trait_path(
-    trait_id: str,
-    data_dir: Optional[str] = None,
-    check_exists: bool = True,
-) -> Optional[str]:
-    """
-    Resolve a FinnGen phenocode to its local file path.
-
-    Args:
-        trait_id: FinnGen phenocode.
-        data_dir: Base directory for FinnGen data (optional).
-        check_exists: If True, return None when the file does not exist.
-
-    Returns:
-        Absolute file path, or None if check_exists=True and file is missing.
-    """
-    path = get_finngen_trait_path(trait_id, data_dir=data_dir)
-    if check_exists and not os.path.isfile(path):
-        return None
-    return path
-
-
 # --- CLI for standalone use ---
 
 def _main():
@@ -222,7 +156,10 @@ def _main():
     parser.add_argument(
         "source",
         choices=["gwas", "finngen"],
-        help="Data source: gwas (GWAS Catalog) or finngen (FinnGen R12).",
+        help=(
+            "Data source: gwas (GWAS Catalog) or finngen "
+            "(prints the FinnGen download page URL — data must be downloaded manually)."
+        ),
     )
     parser.add_argument(
         "trait_id",
@@ -236,7 +173,7 @@ def _main():
     parser.add_argument(
         "--download",
         action="store_true",
-        help="For GWAS: download the file into the default data dir. Ignored for FinnGen (local only).",
+        help="For GWAS: download the file into the default data dir.",
     )
     parser.add_argument(
         "--output-dir",
@@ -252,11 +189,6 @@ def _main():
         "--gwas-data-dir",
         default=None,
         help="Directory for GWAS downloads. Overrides PENNPRS_GWAS_DATA_DIR.",
-    )
-    parser.add_argument(
-        "--finngen-data-dir",
-        default=None,
-        help="Base directory for FinnGen files. Overrides PENNPRS_FINNGEN_DATA_DIR.",
     )
     args = parser.parse_args()
 
@@ -284,14 +216,11 @@ def _main():
         return 0
 
     if args.source == "finngen":
-        path = get_finngen_trait_path(
-            args.trait_id,
-            data_dir=args.finngen_data_dir or DEFAULT_FINNGEN_DATA_DIR,
+        print(
+            f"FinnGen summary statistics must be downloaded manually.\n"
+            f"Please visit the FinnGen data download page to request access and download the data:\n"
+            f"  {FINNGEN_DOWNLOAD_URL}"
         )
-        print(path)
-        if not os.path.isfile(path):
-            print("NOT_FOUND", file=__import__("sys").stderr)
-            return 1
         return 0
 
     return 0
