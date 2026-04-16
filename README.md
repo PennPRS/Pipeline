@@ -35,7 +35,7 @@ Before running the pipeline, please consider the following quality control (QC) 
 - Remove SNPs with minor allele frequencies (MAF) lower than 1% in all populations.
 - The genetic ancestry for each input GWAS summary data needs to be identified. If the GWAS training samples consist of multiple ancestry groups, please choose the ancestry group with the largest sample size.
 
-## Enviroment Set Up
+## Environment Set Up
 
 Create and activate the conda environment so all dependencies are available:
 
@@ -114,8 +114,15 @@ python query_data.py finngen F5_DM2
 | `--resolve-only` | Only print URL; do not download (GWAS only). |
 | `--download` | For GWAS: download the file into the data dir. |
 | `--output-dir DIR` | Directory for logs (e.g. `query_data.log`). Default: current directory. |
-| `--harmonised-file PATH` | Path to `harmonised.txt` (GWAS only). Overrides env. |
-| `--gwas-data-dir DIR` | Directory for GWAS downloads. Overrides env. |
+| `--harmonised-file PATH` | Path to `harmonised.txt` (GWAS only). Overrides `PENNPRS_HARMONISED_FILE`. |
+| `--gwas-data-dir DIR` | Directory for GWAS downloads (absolute or relative path). Overrides `PENNPRS_GWAS_DATA_DIR`. |
+
+**Environment variables**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PENNPRS_HARMONISED_FILE` | Path to the harmonised index file used for URL resolution. | `data/harmonised.txt` (repo-relative) |
+| `PENNPRS_GWAS_DATA_DIR` | Directory where downloaded GWAS summary statistics are saved. | `/home/ubuntu/data2/gwas_data/` |
 
 **Exit codes**
 

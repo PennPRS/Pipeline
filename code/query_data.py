@@ -80,7 +80,7 @@ def download_gwas_catalog_file(
     Returns:
         Path to the downloaded (or existing) file, or None on failure.
     """
-    data_dir = data_dir or DEFAULT_GWAS_DATA_DIR
+    data_dir = os.path.abspath(data_dir or DEFAULT_GWAS_DATA_DIR)
     os.makedirs(data_dir, exist_ok=True)
 
     file_name = os.path.basename(trait_url)
@@ -93,26 +93,10 @@ def download_gwas_catalog_file(
         return new_file_path
 
     try:
-        cwd = os.getcwd()
-        downloaded = None
-        try:
-            os.chdir(os.path.dirname(data_dir) or "/")
-            downloaded = wget.download(trait_url, out=data_dir)
-        finally:
-            os.chdir(cwd)
-            if downloaded:
-                temp_path = downloaded + ".tmp"
-                if os.path.exists(temp_path):
-                    try:
-                        os.remove(temp_path)
-                    except OSError:
-                        pass
-
+        downloaded = wget.download(trait_url, out=data_dir)
         if downloaded and os.path.exists(downloaded):
             if os.path.abspath(downloaded) != os.path.abspath(new_file_path):
                 os.rename(downloaded, new_file_path)
-            else:
-                new_file_path = downloaded
             return new_file_path
     except Exception as e:
         logger.exception("Failed to download GWAS file: %s", e)
@@ -120,14 +104,15 @@ def download_gwas_catalog_file(
         if log_path is None and output_dir:
             log_path = os.path.join(output_dir, "query_data.log")
         if log_path:
-            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            log_dir = os.path.dirname(log_path)
+            if log_dir:
+                os.makedirs(log_dir, exist_ok=True)
             with open(log_path, "a") as log_file:
                 log_file.write(
                     f"Failed to download the file from GWAS Catalog: {e}. "
                     f"Trait ID: {trait_id}. Please ensure the GWAS Catalog ID is in the "
                     "queryable data list on https://pennprs.org/data.\n"
                 )
-        return None
 
     return None
 
