@@ -7,6 +7,7 @@ library(data.table)
 library(dplyr)
 library(scales)
 library(stringr) # for str_split
+library(readxl)
 
 options(stringsAsFactors=F)
 option_list = list(
@@ -146,6 +147,7 @@ if ('LDpred2' %in% methods){
 
 
 #source(paste0(PUMAS_path, 'PennPRS_functions.R')) # please save the PennPRS_functions.R file to the /PUMAS/code/ directory
+source(paste0(PUMAS_path, 'gwas_qc_report_generator.R'))
 gwas_path <- paste0(workdir, 'sumdata/')
 output_path <- paste0(workdir, 'output/')
 input_path <- paste0(workdir, 'input_for_eval/')
@@ -167,8 +169,8 @@ for (method in methods){
 }
 if (ensemble) ensemble.methods = methods
 
-# copy the input GWAS summary data, {Ancestry}_{Trait}.txt, to the /sumdata/ folder
-system(paste0('cp -r ',input_GWAS_path, trait_name,'.txt ', workdir, 'sumdata/'))
+# # copy the input GWAS summary data, {Ancestry}_{Trait}.txt, to the /sumdata/ folder
+# system(paste0('cp -r ',input_GWAS_path, trait_name,'.txt ', workdir, 'sumdata/'))
 
 
 
@@ -177,78 +179,7 @@ cat(paste0("\n********************************************"))
 cat(paste0("\n**** Step 0: QC for the input GWAS data ****"))
 cat(paste0("\n********************************************\n"))
 
-sumraw = bigreadr::fread2(paste0(workdir, 'sumdata/', trait_name, '.txt'))
-sumraw$BETA = as.numeric(sumraw$BETA)
-sumraw$SE = as.numeric(sumraw$SE)
-sumraw$MAF = as.numeric(sumraw$MAF)
-sumraw$P = as.numeric(sumraw$P)
-# 0. Are there any SNP that have reasonable z-score?
-chi2_thr = 30
-remaining.SNPs = which(abs(sumraw$BETA/sumraw$SE) < sqrt(chi2_thr))
-if (length(remaining.SNPs) < 5){
-  stop(paste0("[Terminated] Job is terminated because less than 5 SNPs have z-score < sqrt(30), suggesting issues with the input GWAS data."))
-}
-
-n.na = sum(!complete.cases(sumraw))
-if (n.na > 0){
-  sumraw = sumraw[complete.cases(sumraw), ]
-  if (n.na == 1) print(paste0('* 1 SNP has missing GWAS summary-level information and is removed.'))
-  if (n.na > 1) print(paste0('* ', n.na, ' SNPs have missing GWAS summary-level information and are removed.'))
-}
-
-
-# 1. Remove SNPs with problematic BETA
-beta.thr = 1e3
-rm.indx1 = which(abs(sumraw$BETA) > beta.thr)
-if (length(rm.indx1) > 0){
-  if (length(rm.indx1) == 1) print(paste0('* 1 SNP has problematic GWAS summary statistic with abs(BETA) > ', beta.thr, ' and is removed.'))
-  if (length(rm.indx1) > 1) print(paste0('* ', length(rm.indx1), ' SNPs have problematic GWAS summary statistics with abs(BETA) > ', beta.thr, ' and are removed.'))
-} 
-
-# 2. Remove SNPs with problematic p-values
-rm.indx2 = which( ((sumraw$P) > 1) | (sumraw$P < 0))
-if (length(rm.indx2) > 0){
-  if (length(rm.indx2) == 1) print(paste0('* 1 SNP has p-value > 1 or < 0 and is removed.'))
-  if (length(rm.indx2) > 1) print(paste0('* ', length(rm.indx2), ' SNPs have p-value > 1 or < 0 and are removed.'))
-} 
-
-# 3. Remove SNPs with an effective sample size less than 0.67 times the 90th percentile of sample size.
-rm.indx3 = numeric()
-# N.90percentile = quantile(sumraw$N, 0.1)
-# rm.indx3 = which(sumraw$N < N.90percentile)
-# if (length(rm.indx3) > 0){
-#   if (length(rm.indx3) == 1) print(paste0('* 1 SNP has an effective sample size less than 0.67 times the 90th percentile of the total sample size and is removed.'))
-#   if (length(rm.indx3) > 1) print(paste0('* ', length(rm.indx3), ' SNPs have an effective sample size less than 0.67 times the 90th percentile of the total sample size and are removed.'))
-# } 
-
-# 4. Remove SNPs with extremely large effect sizes (z^2> 100) 
-chi2.thr = 1e3
-rm.indx4 = which((sumraw$BETA/sumraw$SE)^2 > chi2.thr)
-if (length(rm.indx4) > 0){
-  if (length(rm.indx4) == 1) print(paste0('* 1 SNP has an extremely large effect size  (z-score^2 > ', chi2.thr, ') and is removed.'))
-  if (length(rm.indx4) > 1) print(paste0('* ', length(rm.indx4), ' SNPs have extremely large effect sizes  (z-score^2 > ', chi2.thr, ') and are removed.'))
-} 
-
-# 5. Remove SNPs with zero SE 
-rm.indx5 = which(sumraw$SE == 0)
-if (length(rm.indx5) > 0){
-  if (length(rm.indx5) == 1) print(paste0('* 1 SNP has SE = 0 and is removed.'))
-  if (length(rm.indx5) > 1) print(paste0('* ', length(rm.indx5), ' SNPs have SE = 0 and are removed.'))
-} 
-rm.indx = unique(c(rm.indx1, rm.indx2, rm.indx3, rm.indx4, rm.indx5))
-
-if (length(rm.indx) > 0){
-  sumraw = sumraw[-rm.indx, ]
-  if (nrow(sumraw) == 0){
-    stop(paste0("[Terminated] 0 SNPs remaining after QC. Job terminated.\n * Please check the quality of the input GWAS summary data and make sure the columns are in correct format."))
-  }
-  if (nrow(sumraw) > 0){
-    write_delim(sumraw, paste0(workdir, 'sumdata/', trait_name, '.txt'), delim = '\t')
-    if (length(rm.indx) == 1) print(paste0('* 1 problematic SNP removed. QC step completed.'))
-    if (length(rm.indx) > 1) print(paste0('* QC step completed. ', nrow(sumraw), ' SNPs remaining. ', length(rm.indx), ' problematic SNPs removed.'))
-  }
-}
-if (length(rm.indx) == 0) print(paste0('* QC step completed. ', nrow(sumraw), ' SNPs remaining. No SNP was removed.'))
+write_QC_report(race, trait, input_GWAS_path, workdir, PennPRS_path)
 
 
 # --------------------------------------------------------------------
@@ -380,7 +311,7 @@ if (('lassosum2' %in% methods) | ('LDpred2' %in% methods)){
     if (file.exists(pumasout)){
       sumraw = bigreadr::fread2(pumasout)
       sumstats = sumraw[,c('CHR','SNP','A1','A2','BETA','SE','P','N', 'MAF')]
-      names(sumstats) <- c("chr", "rsid", "a1", "a0", "beta", "beta_se", "p", "n_eff", "a1_sumdata_af")
+      names(sumstats) <- c("chr", "rsid", "a0", "a1", "beta", "beta_se", "p", "n_eff", "a1_sumdata_af")
       # a0: effect allele
       
       info_snp <- snp_match(sumstats, map_ldref, strand_flip = T, join_by_pos = F) # important: for real data, strand_flip = T
@@ -397,7 +328,7 @@ if (('lassosum2' %in% methods) | ('LDpred2' %in% methods)){
       if (!dir.exists(td)) dir.create(td)
       setwd(td)
       tmp <- tempfile(tmpdir = td)
-
+      
       ld = NULL
       for (chr in 1:22) {
         cat(chr, ".. ", sep = "")
@@ -576,7 +507,7 @@ if ('lassosum2' %in% methods){
     if(file.exists(output_lassosum2)){
       score = bigreadr::fread2(output_lassosum2) 
       n.tuning = ncol(score) - 4 # as.numeric(strsplit(colnames(score)[ncol(score)],split='_')[[1]][2])
-      colnames(score) = c('CHR', 'SNP', 'A1', 'A2', paste0('BETA',1:n.tuning))
+      colnames(score) = c('CHR', 'SNP', 'A2', 'A1', paste0('BETA',1:n.tuning)) # (a1, a0) -> (A2, A1)
     }
     
     # Match alleles with GWAS summary data:
@@ -659,7 +590,7 @@ if ('LDpred2' %in% methods){
     if(file.exists(output_LDpred2)){
       score = bigreadr::fread2(output_LDpred2) 
       n.tuning = ncol(score) - 4 # as.numeric(strsplit(colnames(score)[ncol(score)],split='_')[[1]][2])
-      colnames(score) = c('CHR', 'SNP', 'A1', 'A2', paste0('BETA',1:n.tuning))
+      colnames(score) = c('CHR', 'SNP', 'A2', 'A1', paste0('BETA',1:n.tuning))  # (a1, a0) -> (A2, A1)
     }
     
     # Match alleles with GWAS summary data:
@@ -885,7 +816,7 @@ if (('lassosum2' %in% methods) | ('LDpred2' %in% methods)){
   sumstats$SE = as.numeric(sumstats$SE)
   sumstats$N = as.numeric(sumstats$N)
   sumstats$MAF = as.numeric(sumstats$MAF)
-  names(sumstats) <- c("chr", "rsid", "a1", "a0", "beta", "beta_se", "p", "n_eff", "a1_sumdata_af")
+  names(sumstats) <- c("chr", "rsid", "a0", "a1", "beta", "beta_se", "p", "n_eff", "a1_sumdata_af")
   
   info_snp <- snp_match(sumstats, map_ldref, strand_flip = T, join_by_pos = F) # important: for real data, strand_flip = T
   info_snp <- tidyr:: drop_na(tibble::as_tibble(info_snp))
@@ -959,7 +890,7 @@ if (('lassosum2' %in% methods) | ('LDpred2' %in% methods)){
         save(optimal.indx, file = paste0(prsdir, trait_name, '.', method, '.optimal.indx.RData'))
         lassosum2.out = signif(params.lassosum2.reduced[train.indx.lassosum2[nonzero.indx][indx.temp],], 4)
         write_delim(lassosum2.out, paste0(PennPRS_finalresults_path, trait_name,'.',method,'.optimal_params.txt'))
-        beta_lassosum2 = data.frame(df_beta[,c('chr','rsid','a1','a0')], beta_lassosum2[,train.indx.lassosum2[nonzero.indx][indx.temp]], delim = '\t')
+        beta_lassosum2 = data.frame(df_beta[,c('chr','rsid','a0','a1')], beta_lassosum2[,train.indx.lassosum2[nonzero.indx][indx.temp]], delim = '\t')
         colnames(beta_lassosum2) = c('CHR','SNP','A1','A2', 'BETA')
         
         nonzero = (sum(beta_lassosum2$BETA!=0)>0)
@@ -1071,7 +1002,7 @@ if (('lassosum2' %in% methods) | ('LDpred2' %in% methods)){
         #             file = paste0(PennPRS_finalresults_path, trait_name,'.',method,'.optimal_params.txt'))
         ldpred2.out = params.ldpred2.train[optimal.indx,]
         write_delim(ldpred2.out, paste0(PennPRS_finalresults_path, trait_name,'.',method,'.optimal_params.txt'))
-        beta_ldpred2 = data.frame(df_beta[,c('chr','rsid','a1','a0')], beta_ldpred2[,nonzero.indx[indx.temp]])
+        beta_ldpred2 = data.frame(df_beta[,c('chr','rsid','a0','a1')], beta_ldpred2[,nonzero.indx[indx.temp]])
         colnames(beta_ldpred2) = c('CHR','SNP','A1','A2', 'BETA')
         
         nonzero = (sum(beta_ldpred2[,'BETA']!=0)>0)

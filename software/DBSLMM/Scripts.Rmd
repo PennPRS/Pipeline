@@ -1,0 +1,178 @@
+---
+title: "Scripts for Other Methods"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Download
+All the code is in the `Compared_methods` folder. You can download it: 
+````{r, engine = 'bash', eval = FALSE}
+git clone https://github.com/biostat0903/DBSLMM-Anaysis.git
+````
+
+# Example data
+- Summary statistics (`summary_gemma_chr1.assoc.txt`) <br>
+The summary statistics is estiamted from 2000 samples from the UKB data. SNPs arethe first 100,000 SNPs from chromosome 1.  <br>
+- Reference data (`ref_chr1.bed`, `ref_chr1.bim` and `ref_chr1.fam`) <br>
+We sampled 300 samples from the 1000 Gemone Project data.  <br>
+- Validation data (`val_chr1.bed`, `val_chr1.bim` and `val_chr1.fam`) <br>
+We sampled 100 samples from the 1000 Gemone Project data.  <br>
+- Test data (`test_chr1.bed`, `test_chr1.bim` and `val_chr1.fam`) <br>
+We sampled 103 samples from the 1000 Gemone Project data.  <br>
+Note: The phenotype of test data is simulated by normal distribution. Therefore, you can not use the test data to evaluate the prediction performance.
+
+
+# SBLUP
+You need to download [GCTA](https://cnsgenomics.com/software/gcta/#Overview/). Here, the code of our paper is as following:
+````{r, engine = 'bash', eval = FALSE}
+let chr=1
+gcta=/your/gcta/path/gcta_1.91.7beta/gcta64
+summf=/your/path/DBSLMM-Analysis/test_dat/summary_gemma_chr
+refld=/your/path/DBSLMM-Analysis/test_dat/ref_chr
+herit=0.5
+m=`cat ${summf}${chr}.assoc.txt | wc -l`
+n=2000
+cojo=$(echo "${m}*(1/${herit}-1)" | bc -l)
+sed -i '1d' ${summf}${chr}.assoc.txt
+awk '{print $2,$6,$7,$8,$9,$10,$11,$5}' ${summf}${chr}.assoc.txt > ${summf}${chr}.ma
+sed -i '1i\SNP A1 A2 freq b se p N' ${summf}${chr}.ma
+mkdir /your/path/DBSLMM-Analysis/test_dat/SBLUP
+estSblup=/your/path/DBSLMM-Analysis/test_dat/SBLUP/esteff
+## SBLUP
+${gcta} --bfile ${refld}${chr} --chr 1 --cojo-file ${summf}${chr}.ma --cojo-sblup ${cojo} --cojo-wind 200 \
+        --thread-num 2 --out ${estSblup}${chr}
+rm ${estSblup}${chr}*badsnps
+rm ${estSblup}${chr}*log
+````
+
+# LDpred
+You need to download [LDpred](https://github.com/bvilhjal/ldpred). Here, the code of our paper is as following:
+````{r, engine = 'bash', eval = FALSE}
+n=2000
+herit=0.5
+ldr=200
+let chr=1
+bfilete=/your/path/DBSLMM-Analysis/test_dat/test_chr
+summf=/your/path/DBSLMM-Analysis/test_dat/summary_gemma_chr
+
+toldpred=/your/path/DBSLMM-Analysis/Compared_methods/LDpred/toldpred.R
+py=/your/python/path/py3/bin/python
+ldpred=/your/path/LDpred/path/LDpred.py
+split=/your/path/DBSLMM-Analysis/Compared_methods/LDpred/split_res2.R
+calcr2=/your/path/DBSLMM-Analysis/Compared_methods/LDpred/r2.R
+max=/your/path/DBSLMM-Analysis/Compared_methods/LDpred/max.R
+
+## transfer gemma format to LDpred format
+Rscript ${toldpred} --gemma ${summf}${chr}.assoc.txt  --ldpred ${summf}${chr}_LDpred.sumstat
+
+## validate
+bfileval=/your/path/DBSLMM-Analysis/test_dat/val_chr
+mkdir /your/path/DBSLMM-Analysis/test_dat/LDpred
+coord1=/your/path/DBSLMM-Analysis/test_dat/LDpred/summary_cv
+${py} ${ldpred} coord --gf ${bfileval}${chr} --ssf ${summf}${chr}_LDpred.sumstat --out ${coord1}.HDF5 --N ${n} \
+                      --ssf-format STANDARD --max-freq-discrep 0.2
+ldest=/your/path/DBSLMM-Analysis/test_dat/LDpred/ld
+infest=/your/path/DBSLMM-Analysis/test_dat/LDpred/esteff
+${py} ${ldpred} gibbs --cf ${coord1} --ldr ${ldr} --ldf ${ldest} --out ${infest} --N ${n} --h2 ${herit} \
+--f 1 0.3 0.1 0.03 0.01 0.003 0.001 0.0003 0.0001 
+pred=/your/path/DBSLMM-Analysis/test_dat/LDpred/pheno
+r2=/your/path/DBSLMM-Analysis/test_dat/LDpred/r2
+for p in 1.0000e+00 3.0000e-01 1.0000e-01 3.0000e-02 1.0000e-02 3.0000e-03 1.0000e-03 3.0000e-04 1.0000e-04;do
+plink-1.9 --bfile ${bfileval}${chr} --score ${infest}_LDpred_p${p}.txt 3 4 7 header sum --out ${pred}_p${p}
+Rscript ${calcr2} --pred ${pred}_p${p}.profile --type sim --r2 ${r2}_p${p}.txt
+rm ${pred}_p${p}.log
+rm ${pred}_p${p}.nopred
+rm ${pred}_p${p}.profile
+done
+pbestf=/your/path/DBSLMM-Analysis/test_dat/LDpred/r2_best.txt
+Rscript ${max} --r2 ${r2}_p --pbest ${pbestf} 
+pbest=`cat ${pbestf}`
+rm ${ldest}*.pkl.gz
+
+## test
+refld=/your/path/DBSLMM-Analysis/test_dat/ref_chr
+coord2=/your/path/DBSLMM-Analysis/test_dat/LDpred/summary_ref
+${py} ${ldpred} coord --gf ${refld}${chr} --ssf ${summf}_LDpred.sumstat --out ${coord2}.HDF5 --N ${n}\
+                      --ssf-format STANDARD --max-freq-discrep 0.2
+${py} ${ldpred} gibbs --cf ${coord2}.HDF5 --ldr ${ldr} --ldf ${ldest} --out ${infest} --N ${n} --h2 ${herit} --f ${pbest}
+mv ${infest}_LDpred-inf.txt ${infest}_inf.txt
+mv ${infest}_LDpred_p${pbest}.txt ${infest}_pbest.txt
+rm ${coord1}.HDF5
+rm ${coord2}.HDF5
+rm ${ldest}*.pkl.gz
+rm ${infest}_LDpred*.txt
+rm ${r2}*
+````
+
+# lassosum
+We use the lassosum by the R package `lassosum`. Here, the code of our paper is as following:
+````{r, engine = 'bash', eval = FALSE}
+let chr=1
+lassosum=/your/path/DBSLMM-Analysis/Compared_methods/lassosum/lassosum.R
+mkdir /your/path/DBSLMM-Analysis/test_dat/lassosum
+summf=/your/path/DBSLMM-Analysis/test_dat/summary_gemma_chr
+refld=/your/path/DBSLMM-Analysis/test_dat/ref_chr
+bfileval=/your/path/DBSLMM-Analysis/test_dat/val_chr
+bfilete=/your/path/DBSLMM-Analysis/test_dat/test_chr
+res=/your/path/DBSLMM-Analysis/test_dat/lassosum/lassosum_res
+Rscript ${lassosum} --summ ${summf}${chr}.assoc.txt --ref ${refld}${chr} --valid ${bfileval}${chr} \
+                    --test ${bfilete}${chr} --res ${res}
+````
+
+# C+T
+To select the best cutoff, we ues a validate data to do P+T. We use the plink-1.9. The `toplinkf`, `clumpf`, `simPred` and `max` functions are in CT folder. You need to download [PLINK](https://www.cog-genomics.org/plink2/). Here, the code is as following:
+````{r, engine = 'bash', eval = FALSE}
+mkdir /your/path/DBSLMM-Analysis/test_dat/CT
+toplinkf=/your/path/DBSLMM-Analysis/Compared_methods/CT/toplinkf.R
+clumpf=/your/path/DBSLMM-Analysis/Compared_methods/CT/toclumpf.R
+simpred=/your/path/DBSLMM-Analysis/Compared_methods/CT/simPred.R
+max=/your/path/DBSLMM-Analysis/Compared_methods/CT/max.R
+bfileval=/your/path/DBSLMM-Analysis/test_dat/val
+
+## transfer to plink format
+let chr=1
+summf=/your/path/DBSLMM-Analysis/test_dat/summary_gemma_chr
+Rscript ${toplinkf} --gemma ${summf}${chr}.assoc.txt --plink ${summf}.plink.txt
+
+## C+T
+clump=/your/path/DBSLMM-Analysis/test_dat/CT/summary
+pred=/your/path/DBSLMM-Analysis/test_dat/CT/pheno
+for p in 5e-8 1e-6 1e-4 1e-3 1e-2 5e-2 1e-1 2e-1 5e-1 1.0; do 
+Rscript ${clumpf} --gemma ${summf}.assoc.txt --plink ${summf}.plink.txt --ref ${bfileval} --pth ${p} \
+--clump ${clump}_p${p} --pred ${pred}
+rm ${clump}_p${p}.clumped
+rm ${clump}_p${p}.log
+rm ${pred}.log
+rm ${pred}.nopred
+r2=/your/path/DBSLMM-Analysis/test_dat/CT/r2
+Rscript ${simpred} --pheno ${pred}.profile --r2 ${r2}_p${p}.txt
+rm ${pred}.profile
+done
+
+## best SNP
+pbestf=/your/path/DBSLMM-Analysis/test_dat/CT/pbest
+Rscript ${max} --r2 ${r2}_p --pbest ${pbestf}.txt 
+pbest=`cat ${pbestf}.txt`
+mv ${clump}_p${pbest}.txt ${clump}_best.txt
+rm ${r2}_p*
+rm ${clump}_p*
+````
+
+# BSLMM
+You need to download [GEMMA](https://github.com/genetics-statistics/GEMMA). `bslmm.R` is a function to summerize the BSLMM results. Here, the code of our paper is as following:
+````{r, engine = 'bash', eval = FALSE}
+let chr=1
+gemma=/your/path/gemma-0.98-linux-static
+bslmmc=/your/path/DBSLMM-Analysis/Compared_methods/BSLMM/bslmm.R
+bfiletr=/your/path/DBSLMM-Analysis/test_dat/val
+cd /your/path/DBSLMM-Analysis/test_dat
+esteff=bslmm_esteff
+${gemma} -bfile ${bfiletr}${chr} -bslmm 1 -o ${snpeff} -w 6000 -s 2000 -rpace 1000
+esteff=/your/path/DBSLMM-Analysis/test_dat/output/result
+esteffout=/your/path/DBSLMM-Analysis/test_dat/output/esteff
+Rscript ${bslmmc} --bim ${bfiletr}${chr}.bim --eff ${esteff}.param.txt --effc ${esteffout}.txt
+rm ${esteff}*
+````
+Note: For BSLMM example, we treat `val` as training data. `-w` and `-s` is the setting in DBSLMM paper. 

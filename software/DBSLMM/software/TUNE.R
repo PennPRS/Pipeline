@@ -1,8 +1,8 @@
 #! /usr/bin/env Rscript
 
 ########################################################################
-# Deterministic Bayesian Sparse Linear Mixed Model (DBSLMM)            #
-# Copyright (C) 2019  Sheng Yang and Xiang Zhou                        #
+# Deterministic Bayesian Sparse Linear Mixed Model (DBSLMM v1.0)       #
+# Copyright (C) 2024  Sheng Yang and Xiang Zhou                        #
 #                                                                      #
 # This program is free software: you can redistribute it and/or modify #
 # it under the terms of the GNU General Public License as published by #
@@ -18,140 +18,102 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>. #
 ########################################################################
 
+# Load parameters
+library(bigsnpr)
 library(bigreadr)
+library(tidyverse)
 library(Metrics)
 require(scoring)
 require(pROC)
 library(optparse)
 
-## Parameter setting
+## Set parameter
 args_list <- list(
-  make_option("--phenoPred", type = "character", default = NULL,
+  make_option("--dbslmm_eff", type = "character", default = NULL,
+              help = "INPUT: ", metavar = "character"),
+  make_option("--validation_g", type = "character", default = NULL,
               help = "INPUT: the predicted phenotype (PLINK output)", metavar = "character"),
-  make_option("--phenoVal", type = "character", default = NULL,
+  make_option("--validation_p", type = "character", default = NULL,
               help = "INPUT: the validation phenotype file and column number", metavar = "character"),
-  make_option("--index", type="character", default="r2",
-              help="INPUT: four different indexes (MSE and R2 for continuous trait, Brier score and AUC for binary trait)", 
-              metavar="character"), 
-  make_option("--h2Range", type = "character", default = NULL,
-              help = "INPUT: the range of h2", metavar = "character"),
+  make_option("--h2f", type = "character", default = NULL,
+              help = "INPUT: the fold of heritability of trait", metavar = "character"),
   make_option("--cov", type = "character", default = NULL,
-              help = "INPUT: covariate", metavar = "character"),
-  make_option("--chr", type = "character", default = NULL,
-              help = "INPUT: chromosome", metavar = "character")
+              help = "INPUT: covariate", metavar = "character")
 )
-
 opt_parser <- OptionParser(option_list=args_list)
 opt <- parse_args(opt_parser)
 
-## output the options
-cat("Acccept Options: \n")
-cat("--phenoPred: ", opt$phenoPred, "\n")
-phenoVal <- unlist(strsplit(opt$phenoVal, ","))[1]
-phenoNum <- unlist(strsplit(opt$phenoVal, ","))[2]
-cat("--phenoVal:  ", phenoVal, "\n")
-cat("--phenoNum:  ", phenoNum, "\n")
-cat("--index:     ", opt$index, "\n")
-if (is.null(opt$h2Range) == F){
-  cat("--h2Range:   ", opt$h2Range, "\n")
-  h2_vec <- unlist(strsplit(opt$h2Range, ","))
-}
+# opt <- list(dbslmm_eff = "/public/home/biostat03/biosoft/DBSLMM/tmp_output/PGC_h2f",
+#             validation_g = "/public/home/biostat03/project/pgsfusionProject/ref_geno/ref", 
+#             validation_p = "/public/home/biostat03/project/pgsfusionProject/ref_geno/ref_p.txt", 
+#             h2f = "1,0.7", 
+#             cov = NULL)
 
-if(is.null(opt$chr) == F){
-  if (as.numeric(opt$chr) %in% c(1:22)){
-    cat("--chr:       ", opt$chr, "\n")
-    cat(paste0("WARNNING: Only chromosome ", opt$chr, "is included!\n"))
-  }
-} else {
-  cat(paste0("Validate for whole genome!\n"))
-}
-if (is.null(opt$cov) == F){
-  cat("--cov:       ", opt$cov, "\n")
-} else{
-  cat("Please check: phenotypes are removed covariates!\n")
-}
-
-## check file
-if (opt$index != "r2" & opt$index != "mse" & opt$index != "bs" & opt$index != "auc"){
-  cat("ERROR: The index is wrong!\n")
+# Check parameters
+val_p <- fread2(opt$validation_p)[, 1]
+val_g_fam <- fread2(paste0(opt$validation_g, ".fam"))
+if(length(val_p) != nrow(val_g_fam)){
+  
+  cat(paste0("ERROR: Sample size of ${valdaition_g} and ${valdaition_p} does not the same! Please check!\n"))
   q()
 }
 
-pheno <- fread2(phenoVal)[, as.numeric(phenoNum)]
-na_idx <- which(!is.na(pheno))
+na_idx <- which(!is.na(val_p))
 cat(paste0(length(na_idx), " samples involves in validation datasets.\n"))
-pheno_na <- pheno[na_idx]
 
-h2_num <- length(h2_vec)
-r2_res <- vector("numeric", h2_num)
-mse_res <- vector("numeric", h2_num)
-bs_res <- vector("numeric", h2_num)
-auc_res <- vector("numeric", h2_num)
-for (hh in 1: h2_num){
-  # for (rr in 1: ld_num){
-
-      if (is.null(opt$chr) == F){
-        pheno_chr1_str <- paste0(opt$phenoPred, opt$chr, "_pv", pv_vec[pp],
-                                 "_r", ld_vec[rr], "_h2f", h2_vec[rr], ".profile")
-        geno_pheno <- fread2(pheno_chr1_str, header = T)[, 6]
-      } else {
-        pheno_chr1_str <- paste0(opt$phenoPred, "_chr", 1, "_h2f", h2_vec[hh], ".profile")
-        geno_pheno <- fread2(pheno_chr1_str, header = T)[, 6]
-        for (chr in 2: 22){
-          pheno_chr_str <- paste0(opt$phenoPred, "_chr", chr, "_h2f", h2_vec[hh], ".profile")
-          pred_chr <- fread2(pheno_chr_str, header = T)[, 6]
-          geno_pheno <- geno_pheno + pred_chr
-        }
-      }
-      if (opt$index == "auc" || opt$index == "bs"){
-        cov <- as.matrix(fread2(opt$cov))
-        coef_lm <- coef(lm(pheno~cov[, -1]))
-        pred_pheno <- geno_pheno + cov %*% coef_lm
-        pred_pheno_na <- pred_pheno[na_idx]
-        bs_res[hh] <- mean(brierscore(pheno_na ~ pred_pheno_na))
-        auc_res[hh] <- as.numeric(auc(roc(pheno_na, pred_pheno_na, levels = c(0, 1))))
-      }
-      if ( (opt$index == "r2" || opt$index == "mse")){
-        if (is.null(opt$cov) == F){
-          cov <- as.matrix(fread2(opt$cov))
-          coef_lm <- coef(lm(pheno~cov))
-          geno_pheno <- geno_pheno + cbind(1, cov) %*% coef_lm
-        } 
-        r2_res[hh] <- cor(geno_pheno[na_idx], pheno[na_idx])^2
-        mse_res[hh] <- mse(geno_pheno[na_idx], pheno[na_idx])
-      }
-  # }
+data_type <- "binary"
+if(length(unique(val_p)) != 2){
+  
+  dat_type <- "qunatitative"
 }
 
-## selection
-if (opt$index == "r2"){
-  out_file <- data.frame(h2 = h2_vec,
-                         R2 = r2_res)
-  out_best <- out_file[which.max(out_file$R2), c(1, 2)]
-  cat("Using", opt$index, "the best combination: h2-threshold: ", out_best[1, 1], ".\n")
-}
-if (opt$index == "mse"){
-  out_file <- data.frame(pv = as.numeric(rep(pv_vec, each=ld_num)),
-                         r2 = as.numeric(ld_vec),
-                         mse = mse_res)
-  out_best <- out_file[which.min(out_file$mse), ]
-  cat("Using", opt$index, "the best combination: h2-threshold: ", out_best[1, 1], ".\n")
-}
-if (opt$index == "auc"){
-  out_file <- data.frame(h2 = h2_vec,
-                         auc = auc_res)
-  out_best <- out_file[which.max(out_file$auc), ]
-  cat("Using", opt$index, "the best combination: h2-threshold: ", out_best[1, 1], ".\n")
-}
-if (opt$index == "bs"){
-  out_file <- data.frame(pv = h2_vec,
-                         bs = bs_res)
-  out_best <- out_file[which.min(out_file$bs), ]
-  cat("Using", opt$index, "the best combination: h2-threshold: ", out_best[1, 1], ".\n")
-}
 
-## output
-write.table(out_file, paste0(opt$phenoPred, "_hval.", opt$index),
-            row.names = F, col.names = F, quote = F)
-write.table(out_best[1], paste0(opt$phenoPred, "_hbest.", opt$index), 
-            row.names = F, col.names = F, quote = F)
+# Load data
+h_vec <- unlist(strsplit(opt$h2f, ","))
+val_dir <- dirname(opt$validation_g)
+
+# Select parameters
+index <- matrix(NA, length(h_vec), 2)
+count <- 1
+for (hh in h_vec){
+
+  dbslmm_eff <- fread2(paste0(opt$dbslmm_eff, "_h2f", hh, ".dbslmm.txt"))
+  colnames(dbslmm_eff) <- c("chr", "rs", "pos", "a0", "a1", "beta", 
+                            "beta_ss", "large")
+  if (!file.exists(paste0(opt$validation_g, ".rds")))
+    snp_readBed(paste0(opt$validation_g, ".bed"))
+  val_g <- snp_attach(paste0(opt$validation_g, ".rds"))
+  map <- transmute(val_g$map,
+                   chr = chromosome, pos = physical.pos, 
+                   a0 = allele2, a1 = allele1)
+  df_beta <- snp_match(dbslmm_eff, map)
+  val_g_imp <- snp_fastImputeSimple(val_g$genotypes)
+  pred_p <- big_prodVec(val_g_imp, df_beta$beta, ind.col = df_beta[["_NUM_ID_"]])
+  
+  ## Include covariables
+  if(!is.null(opt$cov)){
+
+    cov_df <- data.frame(y = val_p, cov)
+    cov_model <- lm(y ~ cov, data = cov_df)
+    pred_c <- predict(cov_model, cov_df)
+    pred_p <- pred_p + pred_c
+  } 
+  
+  if (dat_type == "qunatitative"){
+    
+    index[count, 1] <- cor(val_p[na_idx], pred_p[na_idx])^2
+    index[count, 2] <- mse(val_p[na_idx], pred_p[na_idx])
+  } else {
+    
+    index[count, 1] <- as.numeric(auc(roc(val_p[na_idx], pred_p[na_idx], 
+                                          levels = c(0, 1))))
+    index[count, 2] <- mean(brierscore(val_p[na_idx] ~ pred_p[na_idx]))
+  }
+  count <- count + 1
+}
+best_h2f <- h_vec[which.max(index[, 1])]
+
+# Process file
+paste0("mv ", opt$dbslmm_eff, "_h2f", best_h2f, ".dbslmm.txt ", 
+       opt$dbslmm_eff, "_best.dbslmm.txt ") %>% system()
+# paste0("rm -rf ", opt$dbslmm_eff, "_h2f*") %>% system()

@@ -102,10 +102,10 @@ if(!require(reshape)){
   install.packages("reshape")
   library(reshape)
 }
-if(!require(RISCA)){
-  install.packages("RISCA")
-  library(RISCA)
-}
+# if(!require(RISCA)){
+#   install.packages("RISCA")
+#   library(RISCA)
+# }
 
 
 options(stringsAsFactors=F)
@@ -202,7 +202,6 @@ partitions <- opt$partitions
 # ----------------
 PUMAS_path = paste0(PennPRS_path,'/code/')
 PROSPER_path = paste0(PennPRS_path, 'software/PROSPER')
-path_plink = '/dcl01/chatterj/data/jin/software/plink2'
 PRScs_path = paste0(PennPRS_path, 'software/PRScs/')
 PRScsx_path = paste0(PennPRS_path, 'software/PRScsx/')
 MUSSEL_path = paste0(PennPRS_path, 'software/MUSSEL/')
@@ -275,6 +274,13 @@ if (method %in% 'MUSSEL'){
 }
 
 
+# Read in LD reference file to add SNP position info for output PRS files:
+ref.bim = list()
+for (race in races){
+  ref.bim[[race]] = bigreadr::fread2(paste0(eval_ld_ref_path[race], LDrefpanel,'_hm3_',race,'_ref', '.bim'))[, c(2,4)]
+  colnames(ref.bim[[race]]) = c('SNP', 'chr_position')
+}
+
 # --------------------------------------------------------------------
 # --------------------- Step 2: Train PRS models ---------------------
 # --------------------------------------------------------------------
@@ -305,15 +311,18 @@ if ('PROSPER' %in% methods){
   }
   
   path_data_full = character()
+  unique.chrs = list()
   for (race in races){
     trait_name = paste0(race,'_',trait)
     sumraw0 = bigreadr::fread2(paste0(output_path,trait_name,".gwas_matched.txt"))
     sumraw0 = sumraw0[,c('SNP', 'CHR', 'A1', 'A2', 'BETA', 'SE', 'N')]
+    unique.chrs[[race]] = unique(sumraw0$CHR)
     colnames(sumraw0) = c('rsid', 'chr', 'a1', 'a0', 'beta', 'beta_se', 'n_eff') # A1/a1: REF
     path_data_full[race] = paste0(summdata, 'gwas_PROSPER_step1.', trait_name, '.full.txt')
     write_delim(sumraw0, path_data_full[race], delim = '\t')
     print(paste0(race, ' ', trait, ': Generating input GWAS data for ', method, ' completed.'))
   }
+  chrs = paste0(Reduce(intersect, unique.chrs), collapse = ',')
   path_data_full = paste0(path_data_full, collapse = ',')
   
   # --------------------------------------------------------------------
@@ -348,7 +357,7 @@ if ('PROSPER' %in% methods){
                         paste0('--pop ', paste0(races, collapse = ',')),
                         paste0('--lassosum_param ', lassosum_param),
                         paste0('--ite ', ite),
-                        paste0('--chrom 1-22 '),
+                        paste0('--chrom ', chrs),
                         paste0('--NCORES ', NCORES))
     system(prospercode)
     cat(paste0('Completed training PROSPER for MCCV iteration ', ite, '.'))
@@ -375,7 +384,7 @@ if ('PROSPER' %in% methods){
                       paste0('--pop ', paste0(races, collapse = ',')),
                       paste0('--lassosum_param ', lassosum_param_full),
                       paste0('--ite full'),
-                      paste0('--chrom 1-22 '),
+                      paste0('--chrom ', chrs),
                       paste0('--NCORES ', NCORES))
   system(prospercode)
   cat(paste0('Completed training PROSPER on the original GWAS data.'))
@@ -570,19 +579,25 @@ if ('PRS-CSx' %in% methods){
     n.vec[race] = round(median(valbim$N))
   }
   # Reformat the original summary data to use as the input data for PRS-CSx:
+  unique.chrs = list()
   for (race in races){
     trait_name = paste0(race,'_',trait)
     for (ite in 1:k){
-      sumraw0 = bigreadr::fread2(paste0(output_path,trait_name,".gwas_matched.txt"))[,c('SNP', 'A1', 'A2', 'BETA', 'SE')]
+      sumraw0 = bigreadr::fread2(paste0(output_path,trait_name,".gwas_matched.txt")) # [,c('SNP', 'A1', 'A2', 'BETA', 'SE')]
+      unique.chrs[[race]] = unique(sumraw0$CHR)
+      sumraw0 = sumraw0[,c('SNP', 'A1', 'A2', 'BETA', 'SE')]
       prscs.sumdat.file = paste0(prsdir,trait_name,'_reformated_gwas.txt')
       write_delim(sumraw0, prscs.sumdat.file, delim = '\t')
       print(paste0(race, ' ', trait, ': Generating input GWAS data for ', method, ' completed.'))
     }
   }
+  chrs = paste0(Reduce(intersect, unique.chrs), collapse = ',')
+  
   # --------------------- Run PRS-CSx ---------------------
-  PATH_TO_REFERENCE = paste0(PRScs_path,'ref/')
+  # PATH_TO_REFERENCE = paste0(PRScs_path,'ref/')
+  PATH_TO_REFERENCE = paste0(PennPRS_path, '/LD/') # 1000 Genomes reference data
   SEED = 2024
-  chrs = paste0(1:22, collapse = ',')
+  # chrs = paste0(1:22, collapse = ',')
   training_summary_data_filenames = paste(paste0(prsdir,trait_names,'_reformated_gwas.txt'), collapse=',')
   n_gwas = paste(n.vec, collapse=',')
   pop = paste(races, collapse=',')
@@ -618,7 +633,7 @@ if ('PRS-CSx' %in% methods){
     for(chr in c(1:22)){
       # if (is.na(phi)) temfile = paste0(out_dir, '_pst_eff_a1_b0.5_phiauto_chr',chr,'.txt')
       temfile = paste0(out_dir, '/', method, '_', race, '_pst_eff_a1_b0.5_phi', phi.vals[params.tuned[1]], '_chr',chr,'.txt')
-      if(file.exists(temfile)){
+      if((file.exists(temfile)) & (file.info(temfile)$size > 0)){
         scoretemp = bigreadr::fread2(temfile)[, c(1, 2, 4, 5, 6)]
         colnames(scoretemp) = c('CHR', 'SNP', 'A1', 'A2', 'BETA')
         score = rbind(score, scoretemp)
@@ -654,6 +669,16 @@ if ('MUSSEL' %in% methods){
   # ----------------------------------------------
   # ----------- Run MUSS by chromosome -----------
   # ----------------------------------------------
+  # Extract unique CHR info:
+  unique.chrs = list()
+  for (race in races){
+    trait_name = paste0(race,'_',trait)
+    ite = 1
+    sumraw0 = bigreadr::fread2(paste0(output_path,trait_name,".gwas_matched.txt")) # [,c('SNP', 'A1', 'A2', 'BETA', 'SE')]
+    unique.chrs[[race]] = unique(sumraw0$CHR)
+  }
+  chrs = Reduce(intersect, unique.chrs)
+  
   SEED = 2024
   for (ite in 1:k){
     cat(paste0('Running ', method, ' for MCCV iteration ', ite, '...'))
@@ -662,10 +687,10 @@ if ('MUSSEL' %in% methods){
     out_dir = paste0(prsdir, trait,'.ite',ite) 
     if (!dir.exists(out_dir)) dir.create(out_dir)
     if (!dir.exists(out_dir)) for (race in races) dir.create(paste0(out_dir, '/', race))
-    for (chr in 1:22){
+    for (chr in chrs){
       system(paste0("Rscript ", MUSSEL_path, "R/MUSS.R",
                     " --PATH_package=", MUSSEL_path,
-                    " --PATH_PennPRS=", PennPRS_path, 
+                    # " --PATH_PennPRS=", PennPRS_path, 
                     " --PATH_LDref=", paste0(PennPRS_path, '/LD/'),
                     " --PATH_out=", out_dir,
                     " --pop=", pop,
@@ -690,10 +715,10 @@ if ('MUSSEL' %in% methods){
   out_dir = paste0(prsdir, trait,'.full') 
   if (!dir.exists(out_dir)) dir.create(out_dir)
   if (!dir.exists(out_dir)) for (race in races) dir.create(paste0(out_dir, '/', race))
-  for (chr in c(1:22)){
+  for (chr in chrs){
     system(paste0("Rscript ", MUSSEL_path, "R/MUSS.R",
                   " --PATH_package=", MUSSEL_path,
-                  " --PATH_PennPRS=", PennPRS_path, 
+                  # " --PATH_PennPRS=", PennPRS_path, 
                   " --PATH_LDref=", paste0(PennPRS_path, '/LD/'),
                   " --PATH_out=", out_dir,
                   " --pop=", pop,
@@ -858,7 +883,8 @@ if ('MUSSEL' %in% methods){
     }
   }
   beta_mussel = cbind(ref[, c('CHR.ref', 'SNP', 'A1.ref', 'A2.ref')], beta[,paste0('BETA',1:(n.tuning*length(races)))]) # other files: SNP	CHR	A1	BETA1	BETA2	A2
-  colnames(beta_mussel)[c(1,3,4)] = c('CHR', 'A1', 'A2')
+  # colnames(beta_mussel)[c(1,3,4)] = c('CHR', 'A1', 'A2')
+  colnames(beta_mussel) = c('CHR', 'SNP', 'A1', 'A2', paste0('BETA',1:(n.tuning*length(races))))
   
   # ------------------- Match alleles with GWAS summary data for each ancestry separately ------------------- 
   for (race in races){
@@ -939,12 +965,17 @@ if ('MUSSEL' %in% methods){
       write.table(pumas.cor2,paste0(PennPRS_finalresults_path,trait_name,".",method,".testing.txt"),col.names = T,row.names=F,quote=F,sep="\t")
       
       
-      # Save the best PROSPER model:
+      # Save the best model:
       params.tuned.full = params.tuned
       params.tuned = params.tuned[1]
       params = NULL
       for (ra in races){
-        tem = cbind(bigreadr::fread2(paste0(prsdir, trait,'.full/tmp/MUSS_beta_in_all_settings_bychrom/settings_1.txt')), ra)
+        dir_path = paste0(prsdir, trait,'.full/tmp/MUSS_beta_in_all_settings_bychrom/')
+        settings_files <- list.files(path = dir_path, pattern = "settings_", full.names = TRUE)
+        file_info <- file.info(settings_files)
+        valid_files <- settings_files[!is.na(file_info$size) & file_info$size > 0]
+        selected_file <- if (length(valid_files) > 0) valid_files[1] else NULL
+        tem = cbind(bigreadr::fread2(selected_file), ra)
         colnames(tem)[ncol(tem)] = 'ancestry'
         params = rbind(params, tem)
       }
@@ -973,9 +1004,9 @@ if ('MUSSEL' %in% methods){
       print(paste0('Trained PRS model based on ', method, 'has zero effect estimate for all SNPs. Please try other methods.'))
     }
     
-    # ------------------------------------------------------------------------------
-    # --------------------- Step 6: Train Ensemble PROSPER PRS ---------------------
-    # ------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------
+    # --------------------- Step 6: Train Ensemble PRS ---------------------
+    # ----------------------------------------------------------------------
     pumascode = paste(paste0('Rscript ', PUMAS_path, 'PUMAS.evaluation.customized_MA_single_method_ensemble_2subsamples.R'),
                       paste0('--k ',k), 
                       paste0('--ref_path ', eval_ld_ref),
@@ -989,8 +1020,8 @@ if ('MUSSEL' %in% methods){
                       paste0('--output_path ', PennPRS_finalresults_path))
     system(pumascode)
     # Generate ensemble PRS file:
-    beta_prosper_ensemble = beta_mussel[,c('CHR', 'SNP', 'A1', ' A2', paste0('score',params.tuned.full))]
-    colnames(beta_prosper_ensemble) = c('CHR', 'SNP','A1','A2', paste0('BETA',params.tuned.full))
+    beta_prosper_ensemble = beta_mussel[,c('CHR', 'SNP', 'A1', 'A2', paste0('BETA',params.tuned.full))]
+    # colnames(beta_prosper_ensemble) = c('CHR', 'SNP','A1','A2', paste0('BETA',params.tuned.full))
     beta_prosper_ensemble0 = beta_prosper_ensemble
     
     # 1. Ensemble using PUMA-CUBS
@@ -1020,89 +1051,249 @@ if ('MUSSEL' %in% methods){
 for (method in methods){
   for (race in races){
     trait_name = paste0(race,'_',trait)
-    system(paste('cp -r', paste0(PennPRS_finalresults_path, trait_name,'.',method,'.PRS.txt'), workdir))
-    if (method == 'PROSPER') system(paste('cp -r', paste0(PennPRS_finalresults_path, trait_name,'.',method,'.PRS_single_best.txt'), workdir))
+    SCORE = bigreadr::fread2(paste0(PennPRS_finalresults_path, trait_name,'.',method,'.PRS.txt'))
+    # Update output file format according to the pgsc_calc pipeline from the PGS Catalog
+    SCORE = merge(SCORE, ref.bim[[race]], by = 'SNP')
+    SCORE = SCORE[, c('CHR','chr_position','A1','A2', 'BETA')]
+    colnames(SCORE) = c('chr_name','chr_position','effect_allele','other_allele', 'effect_weight')
+    write_delim(SCORE, paste0(workdir, trait_name,'.',method,'.PRS.txt'))
+    # system(paste('cp -r', paste0(PennPRS_finalresults_path, trait_name,'.',method,'.PRS.txt'), workdir))
+    if (method == 'PROSPER'){
+      SCORE = bigreadr::fread2(paste0(PennPRS_finalresults_path, trait_name,'.',method,'.PRS_single_best.txt'))
+      # Update output file format according to the pgsc_calc pipeline from the PGS Catalog
+      SCORE = merge(SCORE, ref.bim[[race]], by = 'SNP')
+      SCORE = SCORE[, c('CHR','chr_position','A1','A2', 'BETA')]
+      colnames(SCORE) = c('chr_name','chr_position','effect_allele','other_allele', 'effect_weight')
+      write_delim(SCORE, paste0(workdir, trait_name,'.',method,'.PRS_single_best.txt'))
+      # system(paste('cp -r', paste0(PennPRS_finalresults_path, trait_name,'.',method,'.PRS_single_best.txt'), workdir))
+    } 
   }
 }
 
-filen<-paste0(workdir, 'PRS_model_training_info.txt')
+filen<-paste0(workdir, 'PRS_INFO.txt')
 file.create(filen)
-zz <- file(filen, "w")
+zz <- file(filen, "wt")
 
-print.title = paste0("Summary of PRS model Training on ",trait, " for ", race)
-cat(paste0("\n",paste(rep('*', nchar(print.title)+10),collapse='')), file = zz)
-cat(paste0("\n**** ", print.title, " ****"), file = zz)
-cat(paste0("\n",paste(rep('*', nchar(print.title)+10),collapse=''),'\n'), file = zz)
+on.exit({
+  try(close(zz), silent = TRUE)
+}, add = TRUE)
 
+
+write_line <- function(...) {
+  cat(paste0(...), "\n", file = zz, append = TRUE, sep = "")
+}
+
+write_section <- function(title) {
+  write_line("")
+  write_line(paste(rep("=", 70), collapse = ""))
+  write_line(title)
+  write_line(paste(rep("=", 70), collapse = ""))
+}
+
+write_subsection <- function(title) {
+  write_line("")
+  write_line(title)
+  write_line(paste(rep("-", nchar(title)), collapse = ""))
+}
+
+# --------------------------------------------------
+# Header
+# --------------------------------------------------
+write_line("PRS INFORMATION REPORT")
+write_line("")
+write_line(paste0("Trait: ", trait))
+write_line(paste0("Ancestries: ", paste(races, collapse = ", ")))
+write_line(paste0("Methods requested: ", paste(methods, collapse = ", ")))
+write_line(paste0("Generated: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+
+
+# --------------------------------------------------
+# Overview
+# --------------------------------------------------
+write_section("1. OVERVIEW")
+write_line("This file summarizes details of the PRS model training process and provides example")
+write_line("commands for calculating PRS using the trained models.")
+
+
+# --------------------------------------------------
+# Training summary
+# --------------------------------------------------
+write_section("2. SUMMARY OF PRS MODEL TRAINING")
+methods.completed = NULL
 
 if ('PROSPER' %in% methods){
   method = 'PROSPER'
   prsdir = paste0(prsdir0, method,'/') 
-  cat(paste0("\n\n****************************************************"), file = zz)
-  cat(paste0("\n******** PROSPER (January 14, 2024 Version) ********"), file = zz)
-  cat(paste0("\n****************************************************"), file = zz)
-  cat(paste0("\n* Please refer to https://github.com/Jingning-Zhang/PROSPER for details of PROSPER."), file = zz)
-  cat(paste0("\n\n************ Step 1: lassosum2 by race *************"), file = zz)
-  cat(paste0('\n************ Tuning parameter settings: ************'), file = zz)
-  cat(paste0('\nnLambda = ', opt$nlambda, ' (number of candidate values for the shrinkage parameter in the L1 regularization)'), file = zz)
-  cat(paste0('\nnDelta = ', opt$ndelta, ' (number of candidate values for the shrinkage parameter in the L2 regularization)'), file = zz)
-  cat(paste0('\nlambda.min.ratio = ', opt$lambda.min.ratio, ' (ratio between the lowest and highest candidate values of lambda)'), file = zz)
-  cat(paste0('\n************** Tuned parameter values: *************'), file = zz)
+  write_subsection("PROSPER (January 14, 2024 Version)")
+  write_line("* Reference documentation:")
+  write_line("  https://github.com/Jingning-Zhang/PROSPER")
+  write_line("")
+  write_line("*** Step 1: lassosum2 by race ***")
+  write_line("* Tuning parameter settings:")
+  
+  write_line('  - nLambda = ', opt$nlambda, ' (number of candidate values for the shrinkage parameter in the L1 regularization)')
+  write_line('  - nDelta = ', opt$ndelta, ' (number of candidate values for the shrinkage parameter in the L2 regularization)')
+  write_line('  - lambda.min.ratio = ', opt$lambda.min.ratio, ' (ratio between the lowest and highest candidate values of lambda)')
+  write_line("* Tuned parameter values:")
   for (race in races){
-    cat(paste0('\n********************** ',race,' *********************'), file = zz)
+    write_line('  ** ',race,' **')
     trait_name = paste0(race,'_',trait)
-    pars.lassosum2 = bigreadr::fread2(paste0(path_out_lassosum2, '/', race, '/', trait_name, '_optimal_param_full.txt'))
-    cat(paste0('\nLambda = ', signif(as.numeric(pars.lassosum2[1,'lambda']),3)), file = zz)
-    cat(paste0('\nDelta = ', signif(as.numeric(pars.lassosum2[1,'delta']),3)), file = zz)
+    tfile = paste0(workdir, trait_name,'.',method,'.PRS.txt')
+    if (file.exists(tfile)){
+      if (race == races[1]) methods.completed = c(methods.completed, method)
+      pars.lassosum2 = bigreadr::fread2(paste0(path_out_lassosum2, '/', race, '/', trait_name, '_optimal_param_full.txt'))
+      write_line('  - Lambda = ', signif(as.numeric(pars.lassosum2[1,'lambda']),3))
+      write_line('  - Delta = ', signif(as.numeric(pars.lassosum2[1,'delta']),3))
+    }
+    if ((race == races[1])&(!file.exists(tfile))){
+      write_line("* Model training status: no PRS model was generated.")
+      write_line("* Please check log file for details.")
+    }
   }
   
-  cat(paste0("\n\n****************** Step 2: PROSPER *****************"), file = zz)
-  cat(paste0('\n************ Tuning parameter settings: ************'), file = zz)
-  cat(paste0('\nnL1 = ', 5, ' (number of candidate values for the shrinkage parameter in the L1 regularization for SNP effect sizes)'), file = zz)
-  cat(paste0('\nnL2 = ', 5, ' (number of candidate values for the shrinkage parameter in the L2 regularization for inducing similarity across ancestries)'), file = zz)
-  cat(paste0('\nNumber of top-performing PRS models combined in the final PROSPER PRS models: ', 15), file = zz)
+  write_line("*** Step 2: PROSPER ***")
+  write_line("* Tuning parameter settings:")
+  write_line('  - nL1 = ', 5, ' (number of candidate values for the shrinkage parameter in the L1 regularization for SNP effect sizes)')
+  write_line('  - nL2 = ', 5, ' (number of candidate values for the shrinkage parameter in the L2 regularization for inducing similarity across ancestries)')
+  write_line('  Number of top-performing PRS models combined in the final PROSPER PRS models: ', 15)
 }
 
 
 if ('PRS-CSx' %in% methods){
   method = 'PRS-CSx'
   prsdir = paste0(prsdir0, method,'/') 
-  cat(paste0("\n\n**********************************************"), file = zz)
-  cat(paste0("\n******** PRS-CSx (May 14, 2024 Version) ********"), file = zz)
-  cat(paste0("\n************************************************"), file = zz)
-  cat(paste0("\n* Please refer to https://github.com/getian107/PRScsx for details of PRS-CSx."), file = zz)
-  cat(paste0('\n************ Tuning parameter settings: ************'), file = zz)
-  cat(paste0('\nphi = ', opt$phi, ' (global shrinkage parameter)'), file = zz)
-  cat(paste0('\n************** Tuned parameter values: *************'), file = zz)
+  write_subsection("PRS-CSx (May 14, 2024 Version)")
+  write_line("* Reference documentation:")
+  write_line("  https://github.com/getian107/PRScsx")
+  # write_line("")
+  write_line("* Tuning parameter settings:")
+  write_line('  - phi = ', opt$phi, ' (global shrinkage parameter)')
+  write_line("* Tuned parameter values:")
   for (race in races){
-    cat(paste0('\n********************** ',race,' *********************'), file = zz)
+    write_line('  ******* ',race,' *******')
     trait_name = paste0(race,'_',trait)
-    load(paste0(workdir, 'PRS_model_training/',method,'/tuned_parameters_',trait_name,'.RData'))
-    cat(paste0('\nphi = ', phi.vals[params.tuned[1]]), file = zz)
+    tfile = paste0(workdir, trait_name,'.',method,'.PRS.txt')
+    if (file.exists(tfile)){
+      if (race == races[1]) methods.completed = c(methods.completed, method)
+      load(paste0(workdir, 'PRS_model_training/',method,'/tuned_parameters_',trait_name,'.RData'))
+      write_line('  - phi = ', phi.vals[params.tuned[1]])
+    }
+    if ((race == races[1])&(!file.exists(tfile))){
+      write_line("* Model training status: no PRS model was generated.")
+      write_line("* Please check log file for details.")
+    }
   }
 }
 
 if ('MUSSEL' %in% methods){
   method = 'MUSSEL'
   prsdir = paste0(prsdir0, method,'/') 
-  cat(paste0("\n\n***********************************************"), file = zz)
-  cat(paste0("\n******** MUSSEL (April 10, 2024 Version) ********"), file = zz)
-  cat(paste0("\n*************************************************"), file = zz)
-  cat(paste0("\n* Please refer to https://github.com/Jin93/MUSSEL for details of MUSSEL"), file = zz)
-  cat(paste0('\n************ Tuning parameter settings: ************'), file = zz)
-  cat(paste0('\nnLambda = ', opt$nlambda, ' (number of candidate values for the shrinkage parameter in the L1 regularization)'), file = zz)
-  cat(paste0('\nnDelta = ', opt$ndelta, ' (number of candidate values for the shrinkage parameter in the L2 regularization)'), file = zz)
-  cat(paste0('\nlambda.min.ratio = ', opt$lambda.min.ratio, ' (ratio between the lowest and highest candidate values of lambda)'), file = zz)
-  cat(paste0('\n************** Tuned parameter values: *************'), file = zz)
+  write_subsection("MUSSEL (April 10, 2024 Version)")
+  write_line("* Reference documentation:")
+  write_line("  https://github.com/Jin93/MUSSEL")
+  # write_line("")
+  write_line("* Tuning parameter settings:")
+  write_line('  - p = ', opt$p, ': causal SNP proportion')
+  write_line('  - H2 = ', opt$H2, ': heritability = H2 * h2_est from LDSC')
+  write_line('  - sparse = ', opt$sparse, ': whether to consider a sparse model (0, 1, or 0,1)')
+  # make_option("--cors_additional", action="store", default=NA, type='character',
+  #             help="Additional candidate values for tuning parameter: genetic correlation across ancestry groups, example: 3 groups with label 1,2,3, want to add two additional settings: cor_setting1(1,2),cor_setting1(1,3),cor_setting1(2,3);cor_setting2(1,2),cor_setting2(1,3),cor_setting2(2,3) [optional]"),
+  # make_option("--ps_additional", action="store", default=NA, type='character',
+  #             help="Typically not necessary. Additional candidate values for tuning parameter: ancestry-specific causal SNP proportions, example: 3 groups with label 1,2,3, want to add two additional settings: p1_setting1,p2_setting1,p3_setting1;p1_setting2,p2_setting2,p3_setting2 [optional]"),
   for (race in races){
-    cat(paste0('\n********************** ',race,' *********************'), file = zz)
+    write_line('******* ',race,' *******')
     trait_name = paste0(race,'_',trait)
-    pars.lassosum2 = bigreadr::fread2(paste0(path_out_lassosum2, '/', race, '/', trait_name, '_optimal_param_full.txt'))
-    cat(paste0('\nLambda = ', signif(as.numeric(pars.lassosum2[1,'lambda']),3)), file = zz)
-    cat(paste0('\nDelta = ', signif(as.numeric(pars.lassosum2[1,'delta']),3)), file = zz)
+    tfile = paste0(workdir, trait_name,'.',method,'.PRS.txt')
+    if (file.exists(tfile)){
+      if (race == races[1]) methods.completed = c(methods.completed, method)
+      write_line(paste0("* Output score file: ", trait_name, ".", method, ".PRS.txt"))
+      write_line("* Tuned parameter values:")
+      pars.ldpred2 = bigreadr::fread2(paste0(path_out_LDpred2, '/', race, '/', trait_name, '_optimal_param_full.txt'))
+      write_line('  - p = ', signif(as.numeric(pars.ldpred2[1,'p0']),3))
+      write_line('  - H2 = ', signif(as.numeric(pars.ldpred2[1,'h20']),3))
+      write_line('  - sparse = ', signif(as.numeric(pars.ldpred2[1,'sparse0']),3))
+    }
+    if (!file.exists(tfile)){
+      write_line("* Model training status: no PRS model was generated.")
+      write_line("* Please check log file for details.")
+    }
+    # write_line("")
   }
+  # if (file.exists(tfile)) {
+  #   write_line("* Model training status: completed")
+  # }
 }
-close(zz)
+
+
+
+
+# --------------------------------------------------
+# Example: compute PRS with PLINK2
+# --------------------------------------------------
+if (length(methods.completed) > 0){
+  write_section("3. EXAMPLE CODE FOR COMPUTING PRS BASED ON THE GENERATED SCORE FILES")
+  write_line(paste0("   Example genotype data (prefix): PennPRS/test/evaldir/eval.{bim,bed,fam}"))
+  race = races[1]
+  trait_name = paste0(race,'_',trait)
+  example_score_file = paste0(trait_name, ".", methods.completed[1], ".PRS.txt")
+  write_line(paste0("   Example score file: ", example_score_file))
+  
+  write_section("3.1. Example Command for Computing PRS using PLINK2")
+  # write_line("")
+  # write_line("Expected score file columns:")
+  # write_line("  1. Variant ID")
+  # write_line("  2. Effect allele")
+  # write_line("  3. SNP weight")
+  write_line("")
+  
+  # write_line("Example score file:")
+  # write_line(example_score_file)
+  
+  # write_line("")
+  # write_line("PLINK2 command:")
+  # write_line("")
+  write_line("PennPRS/software/plink2 \\")
+  write_line("    --bfile PennPRS/test/evaldir/eval \\")
+  write_line("    --score ", example_score_file, " 2 3 5 cols=+scoresums,-scoreavgs \\")
+  write_line("    --out PRS_", trait_name, ".", methods.completed[1])
+  write_line("    --threads 1")
+  write_line("")
+  write_line("Notes:")
+  write_line("  - Replace the score file path and genotype data path with your actual file paths.")
+  # write_line("  - Try the example provided in {PennPRS/test/Testing PennPRS with an Example.md}.")
+  write_line("  - See https://www.cog-genomics.org/plink/2.0/score for further information.")
+  
+  # --------------------------------------------------
+  # Example: compute PRS with pscs_calc
+  # --------------------------------------------------
+  write_section("3.2. COMPUTING PRS USING pscs_calc")
+  write_line("The pgsc_calc is a tool for calculating PRS using score files published in the PGS Catalog or custom scoring files.")
+  write_line("To calculate PRS using pgsc_calc, please install pgsc_calc following the instructions at https://pgsc-calc.readthedocs.io/en/latest/ first.")
+  write_line("Prepare required files:")
+  write_line("   1. Genotype data (pfile, bfile, or vcf) with prefix: temppath/genotype_data (e.g., PennPRS/test/evaldir/eval.{bim,bed,fam}).")
+  write_line("   2. Samplesheet.csv (store genotype data information, save under the same folder: temppath).")
+  write_line("   3. Update score file with format required by pgsc_calc: temppath/", trait_name, ".", methods.completed[1], "_for_pgsc_calc.txt (save under the same folder: temppath)")
+  
+  write_line("")
+  write_line("Example pscs_calc command:")
+  write_line("")
+  write_line("path/to/nextflow run path/to/pgsc_calc \\")
+  write_line("    -profile test,docker \\")
+  write_line("    --input temppath/samplesheet.csv \\")
+  write_line("    --scorefile temppath/", trait_name, ".", methods.completed[1], "_for_pgsc_calc.txt")
+  write_line("")
+  write_line("Notes:")
+  write_line("  - Replace path/to/nextflow, path/to/pgsc_calc, and temppath/ with your actual paths.")
+  write_line("  - Generated PRS file can be found in pgsc_calc/results/.")
+  # write_line("  - Try the example provided in {PennPRS/test/Testing PennPRS with an Example.md}.")
+  write_line("  - See https://pgsc-calc.readthedocs.io/en/latest/ for further information.")
+}
+
+
+write_line("")
+
+invisible(filen)
+
 
 
 # ---------------------------- README file:
@@ -1112,8 +1303,12 @@ zz <- file(filen, "w")
 
 print.title = paste0("List of Contents:") # ,trait, " for ", race
 cat(paste0("\n",paste(rep('*', nchar(print.title)+10),collapse='')), file = zz)
-cat(paste0("\n* ", print.title, " ****"), file = zz)
+cat(paste0("\n**** ", print.title, " ****"), file = zz)
 cat(paste0("\n",paste(rep('*', nchar(print.title)+10),collapse=''),'\n'), file = zz)
+
+cat(paste0('\n* Report on GWAS QC procedure:'), file = zz)
+cat(paste0('\n  QC_report.txt\n'), file = zz)
+
 cat(paste0('\n* PRS models trained by multi-ancestry methods:'), file = zz)
 for (method in methods){
   cat(paste0('\n* ', method, ':'), file = zz)
@@ -1124,20 +1319,18 @@ for (method in methods){
     if (file.exists(prsfile)) cat(paste0('\n  ', trait_name,'.',method, '.PRS.txt'), file = zz)
   }
 }
-cat(paste0('\n\n* Details of the PRS training:'), file = zz)
-cat(paste0('\n  PRS_model_training_info.txt\n'), file = zz)
+cat(paste0('\n\n* Details of PRS training:'), file = zz)
+cat(paste0('\n  PRS_INFO.txt\n'), file = zz)
 close(zz)
 
 
 # Clean up intermediate files:
-system(paste0('rm -rf ', paste0(workdir, 'input_for_eval/')))
-system(paste0('rm -rf ', paste0(workdir, 'sumdata/')))
-system(paste0('rm -rf ', paste0(workdir, 'output/')))
-system(paste0('rm -rf ', paste0(workdir, 'output_for_eval/')))
-system(paste0('rm -rf ', paste0(workdir, 'PRS_model_training/')))
-system(paste0('rm -rf ', paste0(workdir, 'PennPRS_results/')))
-
-
+unlink(paste0(workdir, 'input_for_eval/'), recursive = TRUE, force = TRUE)
+unlink(paste0(workdir, 'sumdata/'), recursive = TRUE, force = TRUE)
+unlink(paste0(workdir, 'output/'), recursive = TRUE, force = TRUE)
+unlink(paste0(workdir, 'output_for_eval/'), recursive = TRUE, force = TRUE)
+unlink(paste0(workdir, 'PRS_model_training/'), recursive = TRUE, force = TRUE)
+unlink(paste0(workdir, 'PennPRS_results/'), recursive = TRUE, force = TRUE)
 
 
 

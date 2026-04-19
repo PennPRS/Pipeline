@@ -1,0 +1,90 @@
+---
+title: "External Validate"
+---
+
+# Example data
+- DBSLMM result (`your/path/out/summary_gemma_chr1.assoc.dbslmm.txt`) <br>
+The result of DBSLMM.  <br>
+- External summary statistics (`summary_external.txt`) <br>
+The summary statsitics of standing hright (GIANT data).
+- Reference data (`ref_chr1.bed`, `ref_chr1.bim` and `ref_chr1.fam`) <br>
+We sampled 300 samples from the 1000 Gemone Project data.  <br>
+Note: The phenotype of test data is simulated by normal distribution. Therefore, you can not use the test data to evaluate the prediction performance.
+
+# Input file format
+- DBSLMM result <br>
+````{r, engine = 'bash', eval = FALSE}
+rs13302957 G 0.546652 1.82642 1
+rs3748588 T 0.273432 1.64563 1
+rs74045047 A -0.282306 -0.5378 1
+rs3845292 G 0.159231 0.22554 1
+rs113288277 T -0.0524222 -0.18273 1
+rs112797925 A 0.252739 1.12303 1
+rs12743678 A 0.741517 1.51564 1
+rs141242758 C 0.00548007 0.0124342 0
+rs28544273 A 0.0114189 0.0248473 0
+rs3115860 C 0.00628248 0.013297 0
+````
+- External summary statistics <br>
+````{r, engine = 'bash', eval = FALSE}
+rs4747841 A 0.449 -0.000773760673593586
+rs4749917 T 0.436 0.000771419263435909
+rs878177 T 0.3 0.009073036977771
+rs12219605 T 0.427 0.00076948282631908
+rs3763688 C 0.144 -0.00109233489370248
+rs3763689 T 0.217 -0.00466354028609167
+rs1983867 C 0.431 0.00770375479879779
+rs1983866 A 0.288 -0.0089655982510929
+rs1983865 T 0.425 0.00769017229976026
+rs1983864 T 0.3 -0.00907303697777101
+````
+- Reference panel ([PLINK format](https://www.cog-genomics.org/plink/1.9/formats)) <br>
+The same file name of bed, bim and fam files. 
+
+# Input parameters
+We prepare all the input file in the folder `test_dat`. You can output the explanation for each parameter: 
+````{r, engine = 'bash', eval = FALSE}
+Rscript VALID.R -h
+Rscript VALID.R --help
+````
+The details is: 
+````{r, engine = 'bash', eval = FALSE}
+--dbslmm=CHARACTER
+		INPUT:  the result of dbslmm
+--external=CHARACTER
+		INPUT:  the external summary statistics
+--ref=CHARACTER
+		INPUT:  the perfix of reference panel
+--block=CHARACTER
+		INPUT:  the block information (Berisa and Pickrell 2015)
+--chr=CHARACTER
+		INPUT:  the chromosome number
+--mafMax=CHARACTER
+		INPUT:  the maximium of the difference between reference panel and external data
+--outPath=CHARACTER
+		OUTPUT: the output path
+````
+
+# Output
+The output of `VALID.R` is the $R^2$. It will be print in the screen. 
+
+# Example code
+We use the data of `test_dat` to show the external validation. 
+````{r, engine = 'bash', eval = FALSE}
+### change file permission 
+valid=/your/path/DBSLMM/software/valid
+chmod 777 ${valid}
+### External validation
+VALID=/your/path/DBSLMM/software/VALID.R
+dbslmmRes=/your/path/DBSLMM/test_dat/out/summary_gemma_chr
+summf=/your/path/DBSLMM/test_dat/external_summary
+outPath=/your/path/DBSLMM/test_dat
+ref=/your/path/DBSLMM/test_dat/ref_chr
+blockf=/your/path/DBSLMM/test_dat/chr
+### for chromosome 1 (example)
+Rscript ${VALID} --dbslmm ${dbslmmRes} --external ${summf}.txt --ref ${ref} --valid ${valid} --block ${blockf} \
+                 --chr 1 --mafMax 1 --outPath ${outPath}
+### for whole genome (If you have whole genome data, you can use the command)
+Rscript ${VALID} --dbslmm ${dbslmmRes} --external ${summf}.txt --ref ${ref} --valid ${valid} --block ${blockf} \
+                 --chr all --mafMax 0.2 --outPath ${outPath}
+````

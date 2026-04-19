@@ -1,0 +1,34 @@
+---
+title: "Overview"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+![](C:\\Users\\yang\\Desktop\\git\\DBSLMM\\flow_chart.png){height=1000px, width=1500px} <br>
+
+
+# What is DBSLMM
+DBSLMM is the software implementing the Deterministic Bayesian Sparse Linear Mixed Model (DBSLMM). DBSLMM can be used to construction Polygenic Genetics Score (PGS). It fits Linear Mixed Model using summary statistics, LD matrix and LD block information. It is computationally efficient and accurate for Biobank scale GWAS data and uses freely available open-source numerical libraries.
+
+# Model for DBSLMM
+$$y=X_{l} \beta _{l}+X_{s} \beta _{s}+ \epsilon $$
+where $X_{l}$ is the \textit{n} by $m_{l}$ genotype matrix for $m_{l}$ selected likely large-effect SNPs; $\beta _{l}$ is an $m_{l}$ -vector of corresponding effect sizes; $X_{s}$ is the \textit{n} by  $m_{s}$  genotype matrix for  $m_{s}=m-m_{l}$ remaining likely small-effect SNPs; $\beta _{s}$ is an $m_{s}$ -vector of corresponding effect sizes.<br>
+
+# What is External Validation
+External validation is another software in DBSLMM. It can be used to constrution PGS by exteranl summary statsitics and reference panel. It is flexiable to construct PGS for each chromosome one by one or 22 chromosomes together. 
+
+# Model for External Validation
+$$R=cor(\tilde{y},\hat{\tilde{y}})=\frac{cov(\tilde{y},\hat{\tilde{y}})}{var(\tilde{y})var(\hat{\tilde{y}})}=\frac{\tilde{z}^T\hat{\beta}}{\sqrt{\hat{\beta}^T\it\Sigma\hat{\beta}}}$$
+where $\tilde{z}$ is the z-score for external observed summary statistics in terms of z-score, $\hat{\beta}$ is the estimated effect from DBSLMM and $\it\Sigma$ is the LD structure of reference panel.
+
+
+# Installation
+In order to install `DBSLMM` and `VALID`, you should clone this repository via the commands
+````{r, engine = 'bash', eval = FALSE}
+git clone https://github.com/biostat0903/DBSLMM.git
+````
+
+# Citation
+Sheng Yang, Xiang Zhou (2019). Accurate and Scalable Construction of Polygenic Scores in Large Biobank Data Sets. *bioRxiv*.

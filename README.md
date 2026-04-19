@@ -6,38 +6,51 @@ To use the tool, please follow the instructions in **[the Wiki page](https://git
 </br>
 
 
+
 ## Version History
+- [ ] __April 2026:__  Fixed bugs and made the following major updates: 
+
+    * Added a new [mode](https://github.com/PennPRS/Pipeline/wiki/4.-Model-Evaluation-with-Individual%E2%80%90Level-Data) for evaluating trained PRS models based on user-provided individual-level data.<br>
+    * Added a new [function](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#query-data-with-pennprs), which allows users to directly query harmonized GWAS summary datasets from the GWAS Catalog or FinnGen.<br>
+    * Added [Environment setup](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#enviroment-set-up) to ensure all dependencies are available.<br>
+    * Reorganized structure of the tutorial on the [Wiki](https://github.com/PennPRS/Pipeline/wiki) page, provided a `/test/` directory for [testing](https://github.com/PennPRS/Pipeline/wiki/4.-Test-Examples) with example data and output.<br>
+    * Updated the DBSLMM pipeline to the latest V1.0 Version, which requires downloading an additional LD folder (see [SNP information file](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#getting-started)).<br>
+    
 - [ ] __November 2025:__  Updated code/Tuning-Parameter-Free.R.
 - [ ] __January 2025:__  The PennPRS offline pipeline was made available on Github.
 </br>
+
 
 
 ## Getting Started
 
 To install the PennPRS Offline Pipeline, please clone the Github repository by `git clone https://github.com/PennPRS/Pipeline.git` and rename the unzipped folder as `/PennPRS/`.
 
-Download LD reference data files for different populations and save the uncompressed folder(s) in `/PennPRS/LD/`.
+Download LD reference data files for different populations and save the uncompressed folder(s) in `PennPRS/LD/`.
 
-[EUR LD information](https://www.dropbox.com/scl/fi/h3sv4l0wh36ki2lrmektl/EUR.tar.gz?rlkey=4ndd32swtbx1uo2awjv79a9mm&st=t3169p1q&dl=0) (~35.02G), decompress by `tar -zxvf EUR.tar.gz`
+[EUR LD information](https://www.dropbox.com/scl/fi/h3sv4l0wh36ki2lrmektl/EUR.tar.gz?rlkey=4ndd32swtbx1uo2awjv79a9mm&st=t3169p1q&dl=0) (~32.62G), download by `curl -L -o EUR.tar.gz "https://www.dropbox.com/scl/fi/h3sv4l0wh36ki2lrmektl/EUR.tar.gz?rlkey=4ndd32swtbx1uo2awjv79a9mm&st=ui9t5mxo&dl=1"`, then decompress by `tar -zxvf EUR.tar.gz`
 
-[AFR LD information](https://www.dropbox.com/scl/fi/ljmyncadxpehnx7j1scli/AFR.tar.gz?rlkey=13bb3qer2zt7s95cb377yexd7&st=tbjcnf4a&dl=0) (~44.12G), decompress by `tar -zxvf AFR.tar.gz`
+[AFR LD information](https://www.dropbox.com/scl/fi/ljmyncadxpehnx7j1scli/AFR.tar.gz?rlkey=13bb3qer2zt7s95cb377yexd7&st=tbjcnf4a&dl=0) (~41.09G), download by `curl -L -o AFR.tar.gz "https://www.dropbox.com/scl/fi/ljmyncadxpehnx7j1scli/AFR.tar.gz?rlkey=13bb3qer2zt7s95cb377yexd7&st=mmjuvsws&dl=1"`, then decompress by `tar -zxvf AFR.tar.gz`
 
-[AMR LD information](https://www.dropbox.com/scl/fi/8f2i8l7f49tuarpfmsmzq/AMR.tar.gz?rlkey=lgxm7gr5sekedqx7ku1sw3yg0&st=7rvphfcj&dl=0) (~40.17G), decompress by `tar -zxvf AMR.tar.gz`
+[AMR LD information](https://www.dropbox.com/scl/fi/8f2i8l7f49tuarpfmsmzq/AMR.tar.gz?rlkey=lgxm7gr5sekedqx7ku1sw3yg0&st=7rvphfcj&dl=0) (~37.41G), download by `curl -L -o AMR.tar.gz "https://www.dropbox.com/scl/fi/8f2i8l7f49tuarpfmsmzq/AMR.tar.gz?rlkey=lgxm7gr5sekedqx7ku1sw3yg0&e=1&st=7rvphfcj&dl=1"`, then decompress by `tar -zxvf AMR.tar.gz`
 
-[EAS LD information](https://www.dropbox.com/scl/fi/3zg2zdv9o8txmhbj2vzdb/EAS.tar.gz?rlkey=56r4dieiqzu52knnjlphxkjll&st=wchdvytz&dl=0) (~25.68G), decompress by `tar -zxvf EAS.tar.gz`
+[EAS LD information](https://www.dropbox.com/scl/fi/4er74cwemmaqh7cj796wr/EAS.tar.gz?rlkey=j3r5zsc421kizuri8cati9iuz&st=y2ou3lds&dl=0) (~25.66G), download by `curl -L -o EAS.tar.gz "https://www.dropbox.com/scl/fi/4er74cwemmaqh7cj796wr/EAS.tar.gz?rlkey=j3r5zsc421kizuri8cati9iuz&st=y2ou3lds&dl=1"`, then decompress by `tar -zxvf EAS.tar.gz`
 
-[SAS LD information](https://www.dropbox.com/scl/fi/ki5ar39uzfgbqjor5hy1b/SAS.tar.gz?rlkey=3fcqio7n4w1lmr7c52wjue4ua&st=4e6uzvua&dl=0) (~30.56G), decompress by `tar -zxvf SAS.tar.gz`
+[SAS LD information](https://www.dropbox.com/scl/fi/ki5ar39uzfgbqjor5hy1b/SAS.tar.gz?rlkey=3fcqio7n4w1lmr7c52wjue4ua&st=4e6uzvua&dl=0) (~28.46G), download by `curl -L -o SAS.tar.gz "https://www.dropbox.com/scl/fi/ki5ar39uzfgbqjor5hy1b/SAS.tar.gz?rlkey=3fcqio7n4w1lmr7c52wjue4ua&st=szbmp67j&dl=1"`, then decompress by `tar -zxvf SAS.tar.gz`
 
+If you intend to run PRS-CSx, please download and save an additional [SNP information file](https://www.dropbox.com/scl/fi/0i74j1kpz24unfy82itsj/snpinfo_mult_1kg_hm3?rlkey=mhzcfm83v0jxdoemlsw8we716&e=1&dl=0) to `/PennPRS/LD/` by `curl -L -o snpinfo_mult_1kg_hm3 "https://www.dropbox.com/scl/fi/0i74j1kpz24unfy82itsj/snpinfo_mult_1kg_hm3?rlkey=mhzcfm83v0jxdoemlsw8we716&e=1&dl=1"` 
 
-Before running the pipeline, please consider the following quality control (QC) steps for the GWAS summary data:
+If you intend to run DBSLMM, please download the LD reference data for the ancestries of interest provided by the [DBSLMM team](https://drive.google.com/drive/folders/1tC5dT6f2otpY0iXMPRzIxfihERHyURr0) and save the folder(s) in `PennPRS/software/DBSLMM/LDref/`.
+
+Before running the pipeline, please consider the following quality control (QC) steps for the input GWAS summary data:
 
 - Only keep the biallelic [HapMap3 SNPs](https://www.dropbox.com/scl/fi/sktcg9u52jw1clvlj9qwx/hapmap3rsid.txt?rlkey=bwfqpqf9br4ptniee4wjd92c4&st=kefhjw6g&dl=0) to avoid troubles caused by reading huge files (e.g., > 8 million SNPs) in R.
-- Remove SNPs with minor allele frequencies (MAF) lower than 1% in all populations.
 - The genetic ancestry for each input GWAS summary data needs to be identified. If the GWAS training samples consist of multiple ancestry groups, please choose the ancestry group with the largest sample size.
 
-## Environment Set Up
 
-Create and activate the conda environment so all dependencies are available:
+## Enviroment Set Up
+
+In `/PennPRS/`, create and activate the conda environment so all dependencies are available:
 
 ```bash
 conda env create -f environment.yml
@@ -49,15 +62,17 @@ conda activate pennprs
 1. If you encounter errors regarding installing/loading R packages when running the pipeline, please manually install the following R packages first.
 
 ```
-install.packages(c('RISCA','optparse','bigreadr','bigsnpr','bigparallelr', 'bigmemory','stringr','caret','scales','Rcpp', 'RcppArmadillo','RcppTN','inline','doMC','foreach','doParallel','data.table','readr','MASS','reshape','parallel',
-'devtools','genio','dplyr','pryr','Matrix','lavaan'))
+install.packages(c('pROC', 'readxl','optparse','bigreadr','bigsnpr','bigparallelr', 'bigmemory','stringr','caret','scales','Rcpp', 'RcppArmadillo','RcppTN','inline','doMC','foreach','doParallel','data.table','readr','MASS','reshape','parallel',
+'devtools','genio','dplyr','pryr','Matrix','lavaan','BEDMatrix','ROCnReg'))
 ```
+We did not set automatic installation of R packages because on servers or HPC systems, install.packages() may fail if you do not have write permission to the default R library. In that case, you may need to set a personal library path first and then install the R packages.
 
 2. If PLINK or PLINK2 in `/PennPRS/software/` is not working, please follow the tutorials for [PLINK1.9](https://www.cog-genomics.org/plink/) and [PLINK2](https://www.cog-genomics.org/plink/2.0/) to re-install them under the same directory.
 <be>
 
+
 ## PRS method options
-PennPRS supports the following PRS pseudo-training and tuning-parameter-free methods. Please navigate to the Wiki page for the implementation of each of the methods.
+PennPRS supports the following PRS pseudo-training and tuning-parameter-free methods. Please navigate to **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)** for the implementation of each method.
 
 [Single-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/2.-Single%E2%80%90Ancestry-PRS-Modeling)
   1. C+T-pseudo
@@ -76,35 +91,56 @@ PennPRS supports the following PRS pseudo-training and tuning-parameter-free met
   9. MUSSEL-pseudo 
   10. PRS-CSx-pseudo 
 
+
+Each output folder contains the following contents:
+
+1. README.txt
+   List of contents in the output folder.
+2. QC_report.txt - QC process for the input GWAS summary statistics file, including input data format check (detecting required columns) and standard QC steps applied to GWAS summary data for PRS training
+3. PRS_INFO.txt - a summary report for PRS training, including:
+   (1) method versions, tuning parameter settings, optimized tuning parameter values
+   (2) example code for calculating PRS based on the trained PRS models using [PLINK2](https://www.cog-genomics.org/plink/2.0/score) or [pgsc_calc](https://pgsc-calc.readthedocs.io/en/latest/).
+4. Trained PRS models:
+   SNP weight files for the trained PRS models (`{ancestry}_{trait}_{method}.txt`)
+   
+   
+
 ## Query Data with PennPRS
 
-Run `query_data.py` to query data for offline usage. 
+We provide the option to directy query public, harmonized GWAS summary data files from the following two GWAS databases:
+  1. [The GWAS Catalog](https://www.ebi.ac.uk/gwas/)
+  2. [FinnGen](https://www.finngen.fi/en/access_results) (Note: FinnGen requires filling out an online form before downloading)
+
+To query data for offline usage, run `query_data.py` to download the data file to your local server, then run PRS training pipelines with the queried data. 
 
 ```bash
-cd code
+module load anaconda
+cd PennPRS
 conda activate pennprs
-python query_data.py <source> <trait_id> [options]
+python code/query_data.py <source> <trait_id> [options]
 ```
 
 **Sources**
 
-- `gwas` — GWAS Catalog: EBI summary statistics; trait IDs (e.g. `GCST...`) must appear in the harmonised list (see [PennPRS data](https://pennprs.org/data)).
-- `finngen` — FinnGen: summary statistics must be **downloaded manually** by the user. Run the command below to get the download instructions and link.
-
-> **FinnGen data download:** Fill out the access form and download the data directly from the FinnGen release page:
-> https://finngen.gitbook.io/documentation/data-download
+- `gwas` — GWAS Catalog: EBI summary statistics; trait ID (study accession, e.g., `GCST...`) must appear in the harmonised list (see [PennPRS data](https://pennprs.org/data)).
+- `finngen` — FinnGen: R12 EUR files; path pattern `EUR_finngen_R12_<phenocode>.txt`. Phenocode must be in the queryable list (see [PennPRS data](https://pennprs.org/data)).
 
 **Examples**
 
-```bash
+```
+bash
+module load anaconda
+cd PennPRS
+conda activate pennprs
+
 # Resolve GWAS Catalog URL only (no download)
-python query_data.py gwas GCST12345678 --resolve-only
+python code/query_data.py gwas GCST009979 --resolve-only
 
-# Resolve and download GWAS Catalog file into default data dir
-python query_data.py gwas GCST12345678 --download
+# Resolve and download GWAS Catalog file into a data dir (${gwas-data-dir})
+python code/query_data.py gwas GCST009979 --download --gwas-data-dir=test/inputGWAS/
 
-# Print FinnGen manual download instructions and link
-python query_data.py finngen F5_DM2
+# Resolve FinnGen local path (prints path; exit 1 if file missing)
+python code/query_data.py finngen F5_ALZHDEMENT
 ```
 
 **CLI options**
@@ -114,25 +150,91 @@ python query_data.py finngen F5_DM2
 | `--resolve-only` | Only print URL; do not download (GWAS only). |
 | `--download` | For GWAS: download the file into the data dir. |
 | `--output-dir DIR` | Directory for logs (e.g. `query_data.log`). Default: current directory. |
-| `--harmonised-file PATH` | Path to `harmonised.txt` (GWAS only). Overrides `PENNPRS_HARMONISED_FILE`. |
-| `--gwas-data-dir DIR` | Directory for GWAS downloads (absolute or relative path). Overrides `PENNPRS_GWAS_DATA_DIR`. |
-
-**Environment variables**
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PENNPRS_HARMONISED_FILE` | Path to the harmonised index file used for URL resolution. | `data/harmonised.txt` (repo-relative) |
-| `PENNPRS_GWAS_DATA_DIR` | Directory where downloaded GWAS summary statistics are saved. | `/home/ubuntu/data2/gwas_data/` |
+| `--harmonised-file PATH` | Path to `harmonised.txt` (GWAS only). Overrides env. |
+| `--gwas-data-dir DIR` | Directory for saving GWAS summary data file downloaded from the GWAS Catalog. Overrides env. |
+| `--finngen-data-dir DIR` | Base directory for saving GWAS summary data file downloaded from FinnGen. Overrides env. |
 
 **Exit codes**
 
-- `0` — Success (URL printed, file downloaded, or FinnGen link displayed).
+- `0` — Success (URL/path printed, or file downloaded).
 - `1` — Trait not found or download failed.
 
 
-## Demo and Runtime Information
+
+## Evaluation of the Trained PRS models with Individual-Level Data 
+
+We provide a pipeline for evaluating the performance of the trained PRS models on an individual-level dataset provided by the user. 
+
+### Prepare input files
+
+1. PRS model files. Save all the trained PRS models (not necessarily trained from the same job) in `${PRSdir}`. Do not change file names, keep the original file names as they are.
+
+2. Individual-level data for evaluation purpose:
+
+    (1) genotype data in PLINK format: `$PennPRS/test/Evaluation/geno/validation.{bim,bed,fam}` <br>
+    (2) phenotype data: $PennPRS/test/Evaluation/PRSdir/pheno.txt. Currently supported formats: .txt, .tsv, .csv, .xlsx
+
+    Required columns:
+    `ID`: unique individual ID<br>
+    `y`: phenotype value<br>
+    `c1` - `cN` (optional): information on N covariates<br>
+    
+
+### Prepare Evaluation.sh
+
+Prepare the job submission script `Evaluation.sh`. An example script is provided at `test/job_submission/Evaluation.sh`.
+If needed, please modify the command `module load r` to match the module configuration on your server.
+
+
+### Input Arguments
+
+    PennPRS_path='PennPRS/'
+    homedir="$PennPRS_path/test/Evaluation/output/"
+    phenofile="$PennPRS_path/test/Evaluation/pheno/pheno.txt"
+    bfile="$PennPRS_path/test/Evaluation/geno/validation"
+    PRSdir="$PennPRS_path/test/Evaluation/PRSdir/"
+    ID_col_num='1'
+    pheno_col_num='2'
+    covar_col_nums='3-44'
+
+Please refer to the [tutorial](https://github.com/PennPRS/Pipeline/wiki/4.-Model-Evaluation-with-Individual%E2%80%90Level-Data#appendix) for details.
+
+| Option | Description |
+|--------|-------------|
+| `$PennPRS_path` | path to PennPRS. |
+| `homedir` | folder where the output results are saved. |
+| `phenofile` | path to the validation phenotype data. |
+| `bfile` | path to the validation genotype data (in PLINK format). |
+| `PRSdir` | folder where PRS model files are saved. Do not change file names, keep the original file names as they are. |
+| `ID_col_num` | column number for individual ID. |
+| `pheno_col_num` | column number for phenotype value. |
+| `covar_col_nums` | column number(s) for covariate information. |
+
+
+### Job Submission
+
+```
+sbatch test/job_submission/Evaluation.sh ${PennPRS_path} ${homedir} ${phenofile} ${bfile} ${PRSdir} ${ID_col_num} ${pheno_col_num} ${covar_col_nums}
+```
+
+
+
+
+
+## Demo and Memory & Runtime Information
 We have provided example GWAS summary datasets and the corresponding outputs can be found in Sections 2.1 - 2.4 in **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)**.
 The average run time for completing a job that runs C+T-pseudo, Lassosum2-pseudo, LDpred2-pseudo, and ensemble PRS for ~1.2 million HapMap3 SNPs using 2 CPUs (with 30 GB RAM) is approximately 2.5 hours, while increasing to 4 CPUs reduced the run time to approximately two hours.
+With ~1.2 million SNPs, single-ancestry analysis pipelines typically require 30GB memory, while for multi-ancestry analysis pipelines, it is recommended that a 25GB * #ancestries is requested to ensure job completion.
+
+Note: fitting the following models with > 1 million SNPs may generate large temporary files (> 20GB per job), and please make sure you have enough storage space to run multiple jobs in parallel before submitting jobs. 
+  
+  LDpred2-pseudo
+  LDpred2-auto
+  lassosum2-pseudo
+  DBSLMM
+  
+The temporary/intermediate files in the output folder will be cleaned up if a job is completed successfully. However, when a job unexpectedly fails, the large temporary files should be manually deleted to free up space, especially the subfolder `/PRS_model_training/`.
+
 
 ## Contact
 Please report questions and bugs on the Issues page or contact us at pennprs@googlegroups.com.

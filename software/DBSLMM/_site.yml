@@ -1,0 +1,16 @@
+name: "DBSLMM"
+output_dir: "docs"
+navbar:
+  title: "DBSLMM"
+  left:
+    - text: "Overview"
+      href: index.html
+    - text: "Manual"
+      href: Manual.html
+    - text: "External Validate"
+      href: Validate.html
+    - text: "Scripts for Other Methods"
+      href: Scripts.html
+output:
+    html_document:
+      theme: cosmo

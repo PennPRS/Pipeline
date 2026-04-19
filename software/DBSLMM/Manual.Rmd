@@ -1,0 +1,235 @@
+---
+title: "Manual"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Overview
+We upload two versions of DBSLMM, including default version (p-value threshold=1e-06 and LD threshold=0.1) and tuning version. Specially, tuning version needs a validation data, like LDpred, lassosum adn C+T.
+
+# Dependencies
+- R <br> 
+We use [R program](https://www.r-project.org/) to wrap [PLINK](https://www.cog-genomics.org/plink/1.9/) and executable file `dbslmm`. We use two R pakages `optparse` and `data.table`. You can install them by: <br>
+````{r, eval = F}
+install.packages(c("data.table", "optparse"), dependencies=TRUE)
+````
+- PLINK <br>
+DBSLMM treats the large effect SNPs as fixed effect and treats small effect SNPs as random effects. In the paper, we use the pruning and clumping strategy to select large effect SNPs. 
+
+# Example data
+- Summary statistics (`summary_gemma_chr1.assoc.txt`) <br>
+The summary statistics is estiamted from 2000 samples from the UKB data. SNPs are the first 100,000 SNPs from chromosome 1.  <br>
+- Reference data (`ref_chr1.bed`, `ref_chr1.bim` and `ref_chr1.fam`) <br>
+We sampled 300 samples from the 1000 Gemone Project data.  <br>
+- Test data (`test_chr1.bed`, `test_chr1.bim` and `test_chr1.fam`) <br>
+We sampled 103 samples from the 1000 Gemone Project data. <br>
+Note: The phenotype of test data is simulated by normal distribution. Therefore, you can not use the test data to evaluate the prediction performance.
+
+# Input file format
+- Summary statistics ([GEMMA format](https://github.com/genetics-statistics/GEMMA)) <br>
+````{r, engine = 'bash', eval = FALSE}
+chr	rs	ps	n_mis	n_obs	allele1	allele0	af	beta	se	p_wald
+1	rs58276399	731718	99	2301	C	T	0.110	1.272675e-01	3.461097e-02	2.410969e-04
+1	rs141242758	734349	98	2302	C	T	0.109	1.276907e-01	3.463008e-02	2.317011e-04
+1	rs28544273	751343	34	2366	A	T	0.120	1.320775e-01	3.276319e-02	5.720490e-05
+1	rs28527770	751756	31	2369	C	T	0.121	1.364192e-01	3.269947e-02	3.128107e-05
+1	rs3115860	753405	16	2384	C	A	0.128	1.470137e-01	3.158378e-02	3.421012e-06
+1	rs529912679	753430	17	2383	C	T	0.125	1.492779e-01	3.201234e-02	3.285182e-06
+1	rs2073813	753541	22	2378	A	G	0.126	1.422969e-01	3.182372e-02	8.132450e-06
+1	rs3131969	754182	16	2384	A	G	0.129	1.487274e-01	3.155196e-02	2.571517e-06
+1	rs3131968	754192	16	2384	A	G	0.129	1.487274e-01	3.155196e-02	2.571517e-06
+1	rs3131967	754334	16	2384	T	C	0.129	1.487274e-01	3.155196e-02	2.571517e-06
+1	rs3115858	755890	3	2397	A	T	0.129	1.467534e-01	3.146006e-02	3.259725e-06
+1	rs181250764	756533	47	2353	T	C	0.119	1.534308e-01	3.305476e-02	3.641537e-06
+1	rs3131962	756604	0	2400	A	G	0.130	1.464455e-01	3.141295e-02	3.304095e-06
+1	rs6699990	756912	0	2400	A	G	0.130	1.464455e-01	3.141295e-02	3.304095e-06
+1	rs3115853	757640	3	2397	G	A	0.130	1.487149e-01	3.138661e-02	2.282682e-06
+1	rs4951929	757734	1	2399	C	T	0.129	1.469647e-01	3.142780e-02	3.083623e-06
+1	rs4951862	757936	1	2399	C	A	0.129	1.469647e-01	3.142780e-02	3.083623e-06
+1	rs3131956	758144	1	2399	A	G	0.129	1.469647e-01	3.142780e-02	3.083623e-06
+1	rs3131954	758626	3	2397	C	T	0.129	1.489328e-01	3.145579e-02	2.321970e-06
+````
+- Reference panel ([PLINK format](https://www.cog-genomics.org/plink/1.9/formats)) <br>
+The same file name of bed, bim and fam files. 
+- Block information <br>
+We use the block information from [Berisa and Pickrell (2015)](https://academic.oup.com/bioinformatics/article/32/2/283/1743626/Approximately-independent-linkage-disequilibrium). You can download the block information from https://bitbucket.org/nygcresearch/ldetect-data/src/master/. 
+
+# Input parameters
+## DBSLMM
+We prepare all the input file in the folder `test_dat`. You can output the explanation for each parameter: 
+````{r, engine = 'bash', eval = FALSE}
+DSBLMM=/your/path/DBSLMM/software/DBSLMM.R
+Rscript ${DBSLMM} -h
+Rscript ${DBSLMM} --help
+````
+The details is: 
+````{r, engine = 'bash', eval = FALSE}
+--summary=CHARACTER
+		INPUT: the summary statistics (gemma output format)
+--plink=CHARACTER
+		INPUT: the perfix of Plink software
+--dbslmm=CHARACTER
+		INPUT: the perfix of dbslmm software
+--ref=CHARACTER
+		INPUT: the perfix of reference panel
+--block=CHARACTER
+    INPUT: the block information (Berisa and Pickrell 2015)
+--outPath=CHARACTER
+		INPUT: the output path
+--n=CHARACTER
+		INPUT: the sample size of summary data
+--nsnp=CHARACTER
+		INPUT: the number of SNPs in whole genome
+--h2=CHARACTER
+		INPUT: the heritability of trait
+--type=CHARACTER
+		INPUT: type of DBSLMM (default: default version)
+--r2=CHARACTER
+		INPUT: the cutoff of SNPs clumping (default: 0.1)
+--pv=CHARACTER
+		INPUT: the cutoff of SNPs pruning (default: 1e-6)
+--mafMax=CHARACTER
+		INPUT: the maximium of the difference between reference panel and summary data (default:0.2)
+--thread=CHARACTER
+		INPUT: the number of threads (default: 5)
+````
+
+## TUNE
+You can output the explanation for each parameter: 
+````{r, engine = 'bash', eval = FALSE}
+TUNE=/your/path/DBSLMM/software/TUNE.R
+Rscript ${TUNE} -h
+Rscript ${TUNE} --help
+````
+The detail is: 
+````{r, engine = 'bash', eval = FALSE}
+--phenoPred=CHARACTER
+		INPUT: the predicted phenotype (PLINK output)
+--phenoVal=CHARACTER
+		INPUT: the validation phenotype file and column number
+--index=CHARACTER
+		INPUT: four different indexes (MSE and R2 for continuous trait, Brier score and AUC for binary trait)
+--pvRange=CHARACTER
+		INPUT: the range of p-value threshold
+--ldRange=CHARACTER
+		INPUT: the range of LD threshold
+--cov=CHARACTER
+		INPUT: covariate
+--chr=CHARACTER
+		INPUT: chromosome
+````
+
+# Output file format
+The example of output file is: 
+````{r, engine = 'bash', eval = FALSE}
+rs13302957 G 0.546652 1.82642 1
+rs3748588 T 0.273432 1.64563 1
+rs74045047 A -0.282306 -0.5378 1
+rs3845292 G 0.159231 0.22554 1
+rs113288277 T -0.0524222 -0.18273 1
+rs112797925 A 0.252739 1.12303 1
+rs12743678 A 0.741517 1.51564 1
+rs141242758 C 0.00548007 0.0124342 0
+rs28544273 A 0.0114189 0.0248473 0
+rs3115860 C 0.00628248 0.013297 0
+rs2073813 A 0.00771072 0.0164301 0
+rs3131969 A 0.00191854 0.00404717 0
+rs3131968 A 0.00191854 0.00404717 0
+rs3131967 T 0.00191854 0.00404717 0
+rs3115858 A 0.00415565 0.00876637 0
+rs3131962 A 0.0112978 0.0237545 0
+rs3115853 G 0.00251826 0.00529485 0
+rs4951929 C 0.00443819 0.0093624 0
+rs4951862 C 0.00256037 0.00540112 0
+rs3131956 A 0.00341574 0.00720553 0
+````
+The first column is SNP ID. The second column is allele code. The third code is scaled effect size. The forth is non-scaled effect size (using MAF from summary statistics). You can also use the MAF from other reference panel to estimate effect size. The fifth column is the index of whether it is large effect or not (1: large effect, 0: small effect). This output format can be directly used to `score` function of PLINK.
+
+# Example code
+## Parameters initialization
+````{r, engine = 'bash', eval = FALSE}
+### change file permission for dbslmm
+dbslmm=/your/path/DBSLMM/software/dbslmm
+chmod 777 ${dbslmm}
+### Parameters for DBSLMM
+mkdir /your/path/DBSLMM/test_dat/out
+let chr=1
+DBSLMM=/your/path/DBSLMM/software/DBSLMM.R
+summf=/your/path/DBSLMM/test_dat/summary_gemma_chr
+outPath=/your/path/DBSLMM/test_dat/out/
+plink=/your/path/plink-1.9
+ref=/your/path/DBSLMM/test_dat/ref_chr
+blockf=/your/path/DBSLMM/test_dat/chr
+m=`cat ${summf}${chr}.assoc.txt | wc -l` 
+h2=0.5
+nobs=`sed -n "2p" ${summf}${chr}.assoc.txt | awk '{print $5}'`
+nmis=`sed -n "2p" ${summf}${chr}.assoc.txt | awk '{print $4}'`
+n=$(echo "${nobs}+${nmis}" | bc -l)
+````
+Note: In real data, `m` is the snp number for whole genome and `h2` is esitmated by LDSC(https://github.com/bulik/ldsc) or GEMMA(https://github.com/genetics-statistics/GEMMA). For the binary traits, we recommend to use liability scale beritability. 
+
+## Default version
+````{r, engine = 'bash', eval = FALSE}
+### DBSLMM
+Rscript ${DBSLMM} --summary ${summf}${chr}.assoc.txt --outPath ${outPath} --plink ${plink} --dbslmm ${dbslmm} --ref ${ref}${chr} --n ${n} --nsnp ${m} --block ${blockf}${chr}.bed --h2 0.5
+### Predict
+bfilete=/your/path/test_dat/test_chr
+est=/your/path/test_dat/out/summary_gemma_chr
+InterPred=/your/path/out/internal_pred_chr
+## plink 1.9
+plink=/your/path/plink1.9
+${plink} --bfile ${bfilete}${chr} --score ${est}${chr}.assoc.dbslmm.txt 1 2 4 sum --out ${InterPred}${chr}
+rm ${InterPred}${chr}.log
+## plink 2
+plink=/your/path/plink2
+${plink} --bfile ${bfilete} --score ${est}${chr}.assoc.dbslmm.txt 1 2 4 cols=+scoresums --out ${InterPred}${chr}
+rm ${InterPred}.log
+````
+Note: Please check the reference panel. DBSLMM is not accept genotype missing for all samples in reference panel.
+
+## Tuning version
+### Fit model with different p-value and LD threshold
+````{r, engine = 'bash', eval = FALSE}
+### DBSLMM for chromosome 1
+for pv in 1e-05 1e-06 1e-07 1e-08
+do
+for r2 in 0.05 0.1 0.15 0.2 0.25
+do
+Rscript ${DBSLMM} --summary ${summf}${chr}.assoc.txt --outPath ${outPath} --plink ${plink} --dbslmm ${dbslmm} --ref ${ref}${chr} --pv ${pv} --r2 ${r2} --mafMax 1 --n ${n} --nsnp ${m} --type t --block ${blockf}${chr}.bed --h2 ${herit}
+val=/your/path/DBSLMM/test_dat/val_chr
+InterPred=/your/path/DBSLMM/test_dat/out/pheno_gemma_chr${chr}_pv${pv}_r${r2}
+plink-1.9 --bfile ${val}${chr} --score ${outPath}summary_gemma_chr${chr}_pv${pv}_r${r2}.dbslmm.txt 1 2 4 sum --silent --out ${InterPred}
+rm ${outPath}summary_gemma_chr${chr}_pv${pv}_r${r2}.dbslmm.badsnps
+rm ${InterPred}.log
+if [ -f "${InterPred}.nopred" ];then
+rm ${InterPred}.nopred
+fi
+done
+done
+````
+Note: You can submit many jobs for different p-value thresholds, LD thresholds and chromosomes.
+
+### Select the best parameter combination
+````{r, engine = 'bash', eval = FALSE}
+tuningPred=/your/path/DBSLMM/script/TUNE.R
+InterPred=/your/path/DBSLMM/test_dat/out/pheno_gemma_chr
+phenoVal=/your/path/DBSLMM/test_dat/val_chr
+index=r2 #mse, auc or bs
+## chromosome 1 
+Rscript ${TUNE} --phenoPred ${InterPred} --phenoVal ${phenoVal}${chr}.fam,6 --pvRange 1e-05,1e-06,1e-07,1e-08 --ldRange 0.05,0.1,0.15,0.2,0.25 --index ${index} --chr 1
+rbest=`cat ${InterPred}_rbest.${index}`
+pbest=`cat ${InterPred}_pbest.${index}`
+mv ${outPath}summary_gemma_chr${chr}_pv${pbest}_r${rbest}.dbslmm.txt ${outPath}summary_gemma_chr${chr}_best.dbslmm.txt rm ${outPath}summary_gemma_chr${chr}_pv*
+rm ${InterPred}*.profile
+
+## whole genome
+Rscript ${TUNE} --phenoPred ${InterPred} --phenoVal ${phenoVal}${chr}.fam,6 --pvRange 1e-05,1e-06,1e-07,1e-08 --ldRange 0.05,0.1,0.15,0.2,0.25 --index ${index} 
+rbest=`cat ${InterPred}_rbest.${index}`
+pbest=`cat ${InterPred}_pbest.${index}`
+for chr in `seq 1 22`
+do
+mv ${outPath}summary_gemma_chr${chr}_pv${pbest}_r${rbest}.dbslmm.txt ${outPath}summary_gemma_chr${chr}_best.dbslmm.txt rm ${outPath}summary_gemma_chr${chr}_pv*
+done
+rm ${InterPred}*.profile
+````

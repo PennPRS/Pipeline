@@ -102,9 +102,9 @@ if(!require(reshape)){
   install.packages("reshape")
   library(reshape)
 }
-if(!require(RISCA)){
+if(!require(readxl)){
   install.packages("RISCA")
-  library(RISCA)
+  library(readxl)
 }
 
 
@@ -206,7 +206,7 @@ partitions <- opt$partitions
 # ----------------
 PUMAS_path = paste0(PennPRS_path,'/code/')
 PROSPER_path = paste0(PennPRS_path, '/software/PROSPER')
-path_plink = '/dcl01/chatterj/data/jin/software/plink2'
+path_plink = paste0(PennPRS_path, '/plink') # not needed
 PRScs_path = paste0(PennPRS_path, '/software/PRScs/')
 PRScsx_path = paste0(PennPRS_path, '/software/PRScsx/')
 MUSSEL_path = paste0(PennPRS_path, '/software/MUSSEL/')
@@ -249,7 +249,7 @@ if ('MUSSEL' %in% methods){
 }
 
 source(paste0(PUMAS_path, 'PennPRS_functions.R')) # please save the PennPRS_functions.R file to the /PUMAS/code/ directory
-
+source(paste0(PUMAS_path, '/gwas_qc_report_generator.R'))
 
 # please change this directory to the directory specified by jobID
 gwas_path <- paste0(workdir, 'sumdata/')
@@ -305,92 +305,20 @@ if (method %in% 'MUSSEL'){
 }
 
 
-# copy the input GWAS summary data, {Ancestry}_{Trait}.txt, to the /sumdata/folder
-for (race in races){
-  trait_name = paste0(race,'_',trait)
-  system(paste0('cp -r ',input_GWAS_path, trait_name,'.txt ', workdir, 'sumdata/'))
-}
+# # copy the input GWAS summary data, {Ancestry}_{Trait}.txt, to the /sumdata/folder
+# for (race in races){
+#   trait_name = paste0(race,'_',trait)
+#   system(paste0('cp -r ',input_GWAS_path, trait_name,'.txt ', workdir, 'sumdata/'))
+# }
 
 
 ######## QC for GWAS Summary Data:
-cat(paste0("\n********************************************"))
-cat(paste0("\n**** Step 0: QC for the input GWAS data ****"))
-cat(paste0("\n********************************************\n"))
+cat(paste0("\n********************************************************"))
+cat(paste0("\n********** Step 0: QC for the input GWAS data **********"))
+cat(paste0("\n********************************************************\n"))
 
-for (race in races){
-  trait_name = paste0(race,'_',trait)
-  cat(paste0('**** Start QC for GWAS data from ', race, '. ****\n'))
-  sumraw = bigreadr::fread2(paste0(workdir, 'sumdata/', trait_name, '.txt'))
-  sumraw$BETA = as.numeric(sumraw$BETA)
-  sumraw$SE = as.numeric(sumraw$SE)
-  sumraw$MAF = as.numeric(sumraw$MAF)
-  sumraw$P = as.numeric(sumraw$P)
-  # 0. Are there any SNP that have reasonable z-score?
-  chi2_thr = 30
-  remaining.SNPs = which(abs(sumraw$BETA/sumraw$SE) < sqrt(chi2_thr))
-  if (length(remaining.SNPs) < 5){
-    stop(paste0("[Terminated] Job is terminated because less than 5 SNPs have z-score < sqrt(30), suggesting issues with the input GWAS data."))
-  }
-  n.na = sum(!complete.cases(sumraw))
-  if (n.na > 0){
-    sumraw = sumraw[complete.cases(sumraw), ]
-    if (n.na == 1) print(paste0('* 1 SNP has missing GWAS summary-level information and is removed.'))
-    if (n.na > 1) print(paste0('* ', n.na, ' SNPs have missing GWAS summary-level information and are removed.'))
-  }
-  
-  # 1. Remove SNPs with problematic BETA
-  beta.thr = 1e3
-  rm.indx1 = which(abs(sumraw$BETA) > beta.thr)
-  if (length(rm.indx1) > 0){
-    if (length(rm.indx1) == 1) print(paste0('* 1 SNP has problematic GWAS summary statistic with abs(BETA) > ', beta.thr, ' and is removed.'))
-    if (length(rm.indx1) > 1) print(paste0('* ', length(rm.indx1), ' SNPs have problematic GWAS summary statistics with abs(BETA) > ', beta.thr, ' and are removed.'))
-  } 
-  
-  # 2. Remove SNPs with problematic p-values
-  rm.indx2 = which( ((sumraw$P) > 1) | (sumraw$P < 0))
-  if (length(rm.indx2) > 0){
-    if (length(rm.indx2) == 1) print(paste0('* 1 SNP has p-value > 1 or < 0 and is removed.'))
-    if (length(rm.indx2) > 1) print(paste0('* ', length(rm.indx2), ' SNPs have p-value > 1 or < 0 and are removed.'))
-  } 
-  
-  # 3. Remove SNPs with an effective sample size less than 0.67 times the 90th percentile of sample size.
-  rm.indx3 = numeric()
-  # N.90percentile = quantile(sumraw$N, 0.1)
-  # rm.indx3 = which(sumraw$N < N.90percentile)
-  # if (length(rm.indx3) > 0){
-  #   if (length(rm.indx3) == 1) print(paste0('* 1 SNP has an effective sample size less than 0.67 times the 90th percentile of the total sample size and is removed.'))
-  #   if (length(rm.indx3) > 1) print(paste0('* ', length(rm.indx3), ' SNPs have an effective sample size less than 0.67 times the 90th percentile of the total sample size and are removed.'))
-  # } 
-  
-  # 4. Remove SNPs with extremely large effect sizes (z^2> 100) 
-  chi2.thr = 1e3
-  rm.indx4 = which((sumraw$BETA/sumraw$SE)^2 > chi2.thr)
-  if (length(rm.indx4) > 0){
-    if (length(rm.indx4) == 1) print(paste0('* 1 SNP has an extremely large effect size  (z-score^2 > ', chi2.thr, ') and is removed.'))
-    if (length(rm.indx4) > 1) print(paste0('* ', length(rm.indx4), ' SNPs have extremely large effect sizes  (z-score^2 > ', chi2.thr, ') and are removed.'))
-  } 
-  
-  # 5. Remove SNPs with zero SE 
-  rm.indx5 = which(sumraw$SE == 0)
-  if (length(rm.indx5) > 0){
-    if (length(rm.indx5) == 1) print(paste0('* 1 SNP has SE = 0 and is removed.'))
-    if (length(rm.indx5) > 1) print(paste0('* ', length(rm.indx5), ' SNPs have SE = 0 and are removed.'))
-  } 
-  rm.indx = unique(c(rm.indx1, rm.indx2, rm.indx3, rm.indx4, rm.indx5))
-  
-  if (length(rm.indx) > 0){
-    sumraw = sumraw[-rm.indx, ]
-    if (nrow(sumraw) == 0){
-      stop(paste0("[Terminated] 0 SNPs remaining after QC. Job terminated.\n * Please check the quality of the input GWAS summary data and make sure the columns are in correct format."))
-    }
-    if (nrow(sumraw) > 0){
-      write_delim(sumraw, file = paste0(workdir, 'sumdata/', trait_name, '.txt'), delim='\t')
-      if (length(rm.indx) == 1) print(paste0('* 1 problematic SNP removed. QC step completed.'))
-      if (length(rm.indx) > 1) print(paste0('* QC step completed. ', nrow(sumraw), ' SNPs remaining. ', length(rm.indx), ' problematic SNPs removed.'))
-    }
-  }
-  if (length(rm.indx) == 0) print(paste0('* QC step completed. ', nrow(sumraw), ' SNPs remaining. No SNP was removed.'))
-}
+write_QC_report(races, trait, input_GWAS_path, workdir, PennPRS_path)
+
 
 cat(paste0('**** QC for GWAS data completed. ****\n'))
 
@@ -427,6 +355,7 @@ if ('PROSPER' %in% methods){
   for (ite in 1:k){
     Ngwas = numeric()
     path_data[[ite]] = character()
+    unique.chrs = list()
     for (race in races){
       trait_name = paste0(race,'_',trait)
       pumasout = paste0(output_path, trait_name, '.gwas.ite', ite, '.txt')
@@ -434,6 +363,7 @@ if ('PROSPER' %in% methods){
       if (file.exists(pumasout)){
         sumraw0 = bigreadr::fread2(pumasout)
         sumraw0 = sumraw0[,c('SNP', 'CHR', 'A1', 'A2', 'BETA', 'SE', 'N')]
+        unique.chrs[[race]] = unique(sumraw0$CHR)
         colnames(sumraw0) = c('rsid', 'chr', 'a1', 'a0', 'beta', 'beta_se', 'n_eff') # A1/a1: REF
         path_data[[ite]][race] = paste0(summdata, 'gwas.', trait_name, '.ite', ite, '.txt')
         Ngwas[race] = median(sumraw0$n_eff)
@@ -441,6 +371,7 @@ if ('PROSPER' %in% methods){
         print(paste0(race, ' ', trait, ': Generating input for iteration ', ite, ' GWAS data for ', method, ' (step 1) completed.'))
       }
     }
+    chrs = paste0(Reduce(intersect, unique.chrs), collapse = ',')
     path_data[[ite]] = paste0(path_data[[ite]], collapse = ',')
     
     # --------------------- Step 1: Run lassosum2 ---------------------
@@ -456,7 +387,7 @@ if ('PROSPER' %in% methods){
                           paste0('--PATH_plink ',path_plink),
                           paste0('--FILE_sst ', FILE_sst),
                           paste0('--pop ', paste0(races, collapse = ',')),
-                          paste0('--chrom 1-22 '),
+                          paste0('--chrom ', chrs),
                           paste0('--NCORES ', NCORES))
     system(lassosum2code)
   }
@@ -466,15 +397,18 @@ if ('PROSPER' %in% methods){
   # ----------- Step 2.3: Train lassosum2 on the whole data ----------
   # ---------------------------------------------------------------------------------------
   path_data_full = character()
+  unique.chrs = list()
   for (race in races){
     trait_name = paste0(race,'_',trait)
     sumraw0 = bigreadr::fread2(paste0(output_path,trait_name,".gwas_matched.txt"))
     sumraw0 = sumraw0[,c('SNP', 'CHR', 'A1', 'A2', 'BETA', 'SE', 'N')]
+    unique.chrs[[race]] = unique(sumraw0$CHR)
     colnames(sumraw0) = c('rsid', 'chr', 'a1', 'a0', 'beta', 'beta_se', 'n_eff') # A1/a1: REF
     path_data_full[race] = paste0(summdata, 'gwas_PROSPER_step1.', trait_name, '.full.txt')
     write_delim(sumraw0, path_data_full[race], delim = '\t')
     print(paste0(race, ' ', trait, ': Generating input GWAS data for ', method, ' completed.'))
   }
+  chrs = paste0(Reduce(intersect, unique.chrs), collapse = ',')
   path_data_full = paste0(path_data_full, collapse = ',')
   
   # --------------------- Run lassosum2 ---------------------
@@ -493,7 +427,7 @@ if ('PROSPER' %in% methods){
                         paste0('--PATH_plink ',path_plink),
                         paste0('--FILE_sst ', path_data_full),
                         paste0('--pop ', paste0(races, collapse = ',')),
-                        paste0('--chrom 1-22 '),
+                        paste0('--chrom ', chrs),
                         paste0('--NCORES ', NCORES))
   system(lassosum2code)
   
@@ -520,7 +454,7 @@ if ('PROSPER' %in% methods){
   if (!dir.exists(td)) dir.create(td)
   setwd(td)
   tmp <- tempfile(tmpdir = td)
-
+  
   ld = NULL
   for (chr in 1:22) {
     cat(chr, ".. ", sep = "")
@@ -552,7 +486,7 @@ if ('PROSPER' %in% methods){
   if (H2 == 0) H2 = 1e-3
   save(H2, file = paste0(input_path, trait,'.',method, '_H2.','.txt'))
   rm(ld, corr, sumstats, info_snp, sumraw0)
-  gc()
+  # gc()
   
   # --------------------------------------------------------------------
   # -------------- Step 3: PUMAS Evaluation on lassosum2 ---------------
@@ -703,6 +637,7 @@ if ('PRS-CSx' %in% methods){
   write_delim(snp.file, paste0(VALIDATION_BIM_PREFIX, '.bim'), delim = '\t', col_names = F)
   
   # Then, reformat summary data to use as the input data for PRS-CSx:
+  unique.chrs = list()
   for (race in races){
     trait_name = paste0(race,'_',trait)
     for (ite in 1:k){
@@ -712,18 +647,20 @@ if ('PRS-CSx' %in% methods){
         sumraw0 = bigreadr::fread2(pumasout)
         sumraw0 = sumraw0[,c('CHR', 'SNP', 'A1', 'A2', 'BETA', 'SE')]
         colnames(sumraw0) = c('CHR', 'SNP', 'A1', 'A2', 'BETA', 'SE') # A1: REF
+        unique.chrs[[race]] = unique(sumraw0$CHR)
         prscs.sumdat.file = paste0(prsdir,trait_name,'_reformated_gwas.ite', ite, '.txt')
         write_delim(sumraw0[, c('SNP', 'A1', 'A2', 'BETA', 'SE')], prscs.sumdat.file, delim = '\t')
         print(paste0(race, ' ', trait, ': Generating input for iteration ', ite, ' GWAS data for ', method, ' completed.'))
       }
     }
   }
+  chrs = paste0(Reduce(intersect, unique.chrs), collapse = ',')
   
   # --------------------- Step 2.2: Run PRS-CSx ---------------------
-  PATH_TO_REFERENCE = paste0(PRScs_path,'ref/') # 1000 Genomes reference data
+  PATH_TO_REFERENCE = paste0(PennPRS_path, '/LD/') # 1000 Genomes reference data
   SEED = 2024
   trait_names = paste0(races,'_',trait)
-  chrs = paste0(1:22, collapse = ',')
+  # chrs = paste0(1:22, collapse = ',')
   for (ite in 1:k){
     training_summary_data_filenames = paste(paste0(prsdir,trait_names,'_reformated_gwas.ite', ite, '.txt'), collapse=',')
     n_gwas = paste(n.vec, collapse=',')
@@ -758,7 +695,7 @@ if ('PRS-CSx' %in% methods){
         score = NULL
         for(chr in c(1:22)){
           temfile = paste0(out_dir, '_pst_eff_a1_b0.5_phi', scientific(phi,digits=2), '_chr',chr,'.txt')
-          if(file.exists(temfile)){
+          if((file.exists(temfile)) & (file.info(temfile)$size > 0)){
             scoretemp = bigreadr::fread2(temfile)[,c(1,2,4,5,6)]; colnames(scoretemp) = c('CHR', 'SNP', 'A1', 'A2', paste0('BETA', which(phi.vals == phi)))
             score = rbind(score, scoretemp)
             rm(scoretemp)

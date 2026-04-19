@@ -7,7 +7,9 @@ library(data.table)
 library(dplyr)
 library(scales)
 library(stringr) # for str_split
-
+# library(plyr)
+library(rmarkdown)
+library(readxl)
 
 options(stringsAsFactors=F)
 option_list = list(
@@ -54,7 +56,7 @@ option_list = list(
   make_option("--verbose", action="store", default=1, type="integer",
               help="Print logfile? 0 = no; 1 = yes [default: %default]"),
   make_option("--NCORES", action = "store", default = '5', type = "numeric",
-              help="Number of cores used for parallel computing of PRS-CS across chromosomes.
+              help="Number of cores used for parallel computing of LDpred2-auto.
               Default: 5.
               Options: positive integer [Optional]")
 )
@@ -76,7 +78,6 @@ NCORES = opt$NCORES
 
 ld_path <- paste0(PennPRS_path, '/LD/', race, '/')
 PUMAS_path = paste0(PennPRS_path,'/code/')
-PRScs_path = paste0(PennPRS_path, 'software/PRScs/')
 plink_path = paste0(PennPRS_path, 'software/')
 
 trait_name = paste0(race,'_',trait)
@@ -93,7 +94,8 @@ suppressWarnings(dir.create(workdir))
 setwd(workdir) 
 
 
-source(paste0(PUMAS_path, 'PennPRS_functions.R')) # please save the PennPRS_functions.R file to the /PUMAS/code/ directory
+source(paste0(PUMAS_path, 'PennPRS_functions.R'))
+source(paste0(PUMAS_path, 'gwas_qc_report_generator.R'))
 gwas_path <- paste0(workdir, 'sumdata/')
 output_path <- paste0(workdir, 'output/')
 input_path <- paste0(workdir, 'input_for_eval/')
@@ -120,98 +122,29 @@ if ('LDpred2-auto' %in% methods){
   use_MLE = opt$use_MLE
 }
 
-# copy the input GWAS summary data, {Ancestry}_{Trait}.txt, to the /sumdata/ folder
-system(paste0('cp -r ',input_GWAS_path, trait_name,'.txt ', workdir, 'sumdata/'))
-
+# Read in LD reference file to add SNP position info for output PRS files:
+ref.bim = bigreadr::fread2(paste0(eval_ld_ref_path, LDrefpanel,'_hm3_',race,'_ref.bim'))[, c(2,4)]
+colnames(ref.bim) = c('SNP', 'chr_position')
 
 
 ######## QC for GWAS Summary Data:
-cat(paste0("\n********************************************"))
-cat(paste0("\n**** Step 0: QC for the input GWAS data ****"))
-cat(paste0("\n********************************************\n"))
 
-sumraw = bigreadr::fread2(paste0(workdir, 'sumdata/', trait_name, '.txt'))
-sumraw$BETA = as.numeric(sumraw$BETA)
-sumraw$SE = as.numeric(sumraw$SE)
-sumraw$MAF = as.numeric(sumraw$MAF)
-sumraw$P = as.numeric(sumraw$P)
-# 0. Are there any SNP that have reasonable z-score?
-chi2_thr = 30
-remaining.SNPs = which(abs(sumraw$BETA/sumraw$SE) < sqrt(chi2_thr))
-if (length(remaining.SNPs) < 5){
-  stop(paste0("[Terminated] Job is terminated because less than 5 SNPs have z-score < sqrt(30), suggesting issues with the input GWAS data."))
-}
 
-n.na = sum(!complete.cases(sumraw))
-if (n.na > 0){
-  sumraw = sumraw[complete.cases(sumraw), ]
-  if (n.na == 1) print(paste0('* 1 SNP has missing GWAS summary-level information and is removed.'))
-  if (n.na > 1) print(paste0('* ', n.na, ' SNPs have missing GWAS summary-level information and are removed.'))
-}
+# # copy the input GWAS summary data, {Ancestry}_{Trait}.txt, to the /sumdata/ folder
+# system(paste0('cp -r ',input_GWAS_path, trait_name,'.txt ', workdir, 'sumdata/'))
 
-# 1. Remove SNPs with problematic BETA
-beta.thr = 1e3
-rm.indx1 = which(abs(sumraw$BETA) > beta.thr)
-if (length(rm.indx1) > 0){
-  if (length(rm.indx1) == 1) print(paste0('* 1 SNP has problematic GWAS summary statistic with abs(BETA) > ', beta.thr, ' and is removed.'))
-  if (length(rm.indx1) > 1) print(paste0('* ', length(rm.indx1), ' SNPs have problematic GWAS summary statistics with abs(BETA) > ', beta.thr, ' and are removed.'))
-} 
 
-# 2. Remove SNPs with problematic p-values
-rm.indx2 = which( ((sumraw$P) > 1) | (sumraw$P < 0))
-if (length(rm.indx2) > 0){
-  if (length(rm.indx2) == 1) print(paste0('* 1 SNP has p-value > 1 or < 0 and is removed.'))
-  if (length(rm.indx2) > 1) print(paste0('* ', length(rm.indx2), ' SNPs have p-value > 1 or < 0 and are removed.'))
-} 
+cat(paste0("\n********************************************************"))
+cat(paste0("\n********** Step 0: QC for the input GWAS data **********"))
+cat(paste0("\n********************************************************\n"))
 
-# 3. Remove SNPs with an effective sample size less than 0.67 times the 90th percentile of sample size.
-rm.indx3 = numeric()
-# N.90percentile = quantile(sumraw$N, 0.9)
-# rm.indx3 = which(sumraw$N < N.90percentile)
-# if (length(rm.indx3) > 0){
-#   if (length(rm.indx3) == 1) print(paste0('* 1 SNP has an effective sample size less than 0.67 times the 90th percentile of the total sample size and is removed.'))
-#   if (length(rm.indx3) > 1) print(paste0('* ', length(rm.indx3), ' SNPs have an effective sample size less than 0.67 times the 90th percentile of the total sample size and are removed.'))
-# } 
-
-# 4. Remove SNPs with extremely large effect sizes (z^2> 100) 
-chi2.thr = 1e3
-rm.indx4 = which((sumraw$BETA/sumraw$SE)^2 > chi2.thr)
-if (length(rm.indx4) > 0){
-  if (length(rm.indx4) == 1) print(paste0('* 1 SNP has an extremely large effect size  (z-score^2 > ', chi2.thr, ') and is removed.'))
-  if (length(rm.indx4) > 1) print(paste0('* ', length(rm.indx4), ' SNPs have extremely large effect sizes  (z-score^2 > ', chi2.thr, ') and are removed.'))
-} 
-
-# 5. Remove SNPs with zero SE 
-rm.indx5 = which(sumraw$SE == 0)
-if (length(rm.indx5) > 0){
-  if (length(rm.indx5) == 1) print(paste0('* 1 SNP has SE = 0 and is removed.'))
-  if (length(rm.indx5) > 1) print(paste0('* ', length(rm.indx5), ' SNPs have SE = 0 and are removed.'))
-} 
-rm.indx = unique(c(rm.indx1, rm.indx2, rm.indx3, rm.indx4, rm.indx5))
-
-if (length(rm.indx) > 0){
-  sumraw = sumraw[-rm.indx, ]
-  if (nrow(sumraw) == 0){
-    stop(paste0("[Terminated] 0 SNPs remaining after QC. Job terminated.\n * Please check the quality of the input GWAS summary data and make sure the columns are in correct format."))
-  }
-  if (nrow(sumraw) > 0){
-    write_delim(sumraw, file = paste0(workdir, 'sumdata/', trait_name, '.txt'), delim='\t')
-    if (length(rm.indx) == 1) print(paste0('* 1 problematic SNP removed. QC step completed.'))
-    if (length(rm.indx) > 1) print(paste0('* QC step completed. ', nrow(sumraw), ' SNPs remaining. ', length(rm.indx), ' problematic SNPs removed.'))
-  }
-}
-if (length(rm.indx) == 0) print(paste0('* QC step completed. ', nrow(sumraw), ' SNPs remaining. No SNP was removed.'))
+write_QC_report(race, trait, input_GWAS_path, workdir, PennPRS_path)
 
 
 
 if (('LDpred2-auto' %in% methods) | ('DBSLMM' %in% methods)){
   method = 'LDpred2-auto'
   prsdir = paste0(prsdir0, method,'/')
-  if ( opt$verbose >= 1 ){
-    print(paste0('************************************************************'))
-    print(paste0('****** Start training PRS model based on LDpred2-auto ******'))
-    print(paste0('************************************************************'))
-  }
   map_ldref <- readRDS(paste0(ld_path, '/map/map_',LDrefpanel,'_ldref.rds'))
   
   sumraw = bigreadr::fread2(paste0(workdir, 'sumdata/', trait_name, '.txt'))
@@ -221,7 +154,7 @@ if (('LDpred2-auto' %in% methods) | ('DBSLMM' %in% methods)){
   sumstats$SE = as.numeric(sumstats$SE)
   sumstats$N = as.numeric(sumstats$N)
   sumstats$MAF = as.numeric(sumstats$MAF)
-  names(sumstats) <- c("chr", "rsid", "a1", "a0", "beta", "beta_se", "p", "n_eff", "a1_sumdata_af")
+  names(sumstats) <- c("chr", "rsid", "a0", "a1", "beta", "beta_se", "p", "n_eff", "a1_sumdata_af")
   
   info_snp <- snp_match(sumstats, map_ldref, strand_flip = T, join_by_pos = F) # important: for real data, strand_flip = T
   info_snp <- tidyr:: drop_na(tibble::as_tibble(info_snp))
@@ -234,7 +167,9 @@ if (('LDpred2-auto' %in% methods) | ('DBSLMM' %in% methods)){
   if (!dir.exists(td)) dir.create(td)
   setwd(td)
   tmp <- tempfile(tmpdir = td)
+  # dbslmm_h2 <- list()
   
+  ld = NULL
   for (chr in 1:22) {
     cat(chr, ".. ", sep = "")
     ## indices in 'df_beta'
@@ -246,14 +181,19 @@ if (('LDpred2-auto' %in% methods) | ('DBSLMM' %in% methods)){
     if (length(ind.chr3) > 0){
       # corr0
       corr0 <- readRDS(paste0(path_precalLD, '/LD_ref_chr', chr, '.rds'))[ind.chr3, ind.chr3]
-      if (chr == 1) {
-        ld <- Matrix::colSums(corr0^2)
+      if ((chr == 1) | (is.null(ld))) {
+        ld.temp <- Matrix::colSums(corr0^2)
+        ld <- ld.temp
         corr <- as_SFBM(corr0, tmp, compact = TRUE)
       } else {
         if (length(corr0) == 1) corr0 =  as(1, "sparseMatrix") # as(corr0, "sparseMatrix") # as.matrix(corr0, 1, 1)
-        ld <- c(ld, Matrix::colSums(corr0^2))
+        ld.temp <- Matrix::colSums(corr0^2)
+        ld <- c(ld, ld.temp)
         corr$add_columns(corr0, nrow(corr))
       }
+      # (ldsc.temp <- with(df_beta[df_beta$chr == chr, ], snp_ldsc(ld.temp, length(ld.temp), chi2 = (beta / beta_se)^2,
+      #                                 sample_size = n_eff, blocks = NULL)))
+      # dbslmm_h2[[chr]] <- abs(ldsc.temp[["h2"]])
       print(paste0('Complete calculating LD for CHR ', chr))
       rm(corr0)
     }
@@ -262,9 +202,14 @@ if (('LDpred2-auto' %in% methods) | ('DBSLMM' %in% methods)){
   (ldsc <- with(df_beta, snp_ldsc(ld, length(ld), chi2 = (beta / beta_se)^2,
                                   sample_size = n_eff, blocks = NULL)))
   ldsc_h2_est <- abs(ldsc[["h2"]])
-  cat(paste0('Heritability estimate based on LD score regression: ', signif(ldsc[["h2"]], 3)))
-  if (ldsc[["h2"]] < 0) cat(paste0('Warning: negative hertability estimate based on LD score regression.'))
+  cat(paste0('Heritability estimate based on LD score regression: ', signif(ldsc[["h2"]], 3), '\n'))
+  if (ldsc[["h2"]] < 0) cat(paste0('Warning: negative hertability estimate based on LD score regression.\n'))
   if ('LDpred2-auto' %in% methods){
+    if ( opt$verbose >= 1 ){
+      print(paste0('************************************************************'))
+      print(paste0('****** Start training PRS model based on LDpred2-auto ******'))
+      print(paste0('************************************************************'))
+    }
     set.seed(2024)  # to get the same result every time
     multi_auto <- snp_ldpred2_auto(
       corr, df_beta, h2_init = ldsc_h2_est,
@@ -279,7 +224,7 @@ if (('LDpred2-auto' %in% methods) | ('DBSLMM' %in% methods)){
     # To get the final effects / predictions, you should only use chains that pass this filtering:
     if (length(keep) > 0){
       beta_auto <- rowMeans(sapply(multi_auto[keep], function(auto) auto$beta_est))
-      beta_auto0 = data.frame(df_beta[,c('chr','rsid','a1','a0')], beta_auto)
+      beta_auto0 = data.frame(df_beta[,c('chr','rsid','a0','a1')], beta_auto)
       colnames(beta_auto0) = c('CHR','SNP','A1','A2', 'BETA')
       # save(multi_auto, file = paste0(temdir,"ldpred2-",trait,"-auto.RData"))
       write_delim(beta_auto0, file = paste0(workdir, trait_name,'.',method,'.PRS.txt'), delim='\t')
@@ -291,9 +236,9 @@ if (('LDpred2-auto' %in% methods) | ('DBSLMM' %in% methods)){
       rm(corr)
     }
     if (length(keep) == 0){
-      print(paste0('[Warning] All 30 chains in ', method, ' were deemed bad chains, and the resulting PRS model may not have sufficient power. \nPotential explanations:\n 1. The trait is not heritable.\n 2. The GWAS have insufficient power (e.g., due to low sample size) to develop a predictive PRS.\n 3. Issues with the input GWAS summary data (e.g., problematic BETA or SE).\n 4. ', method, ' is not powerful for developing PRS for the trait, in which case other methods can be considered.'))
+      cat(paste0('[Warning] All 30 chains in ', method, ' were deemed bad chains, and the resulting PRS model may not have sufficient power. \nPotential explanations:\n 1. The trait is not heritable.\n 2. The GWAS have insufficient power (e.g., due to low sample size) to develop a predictive PRS.\n 3. Issues with the input GWAS summary data (e.g., problematic BETA or SE).\n 4. ', method, ' is not powerful for developing PRS for the trait, in which case other methods can be considered.'))
       beta_auto <- rowMeans(sapply(multi_auto, function(auto) auto$beta_est))
-      beta_auto0 = data.frame(df_beta[,c('chr','rsid','a1','a0')], beta_auto)
+      beta_auto0 = data.frame(df_beta[,c('chr','rsid','a0','a1')], beta_auto)
       colnames(beta_auto0) = c('CHR','SNP','A1','A2', 'BETA')
       # save(multi_auto, file = paste0(temdir,"ldpred2-",trait,"-auto.RData"))
       write_delim(beta_auto0, file = paste0(workdir, trait_name,'.',method,'.PRS.txt'), delim='\t')
@@ -327,174 +272,315 @@ if ('DBSLMM' %in% methods){
   # --------------------- Step 1.1: Input preparation for DBSLMM --------------------
 
   gwasinput = paste0(workdir, 'sumdata/',trait_name,'.txt')
-  if (!file.exists(gwasinput)) print(paste0('A valid GWAS summary data file is missing.'))
+  if (!file.exists(gwasinput)){
+    print(paste0('A valid GWAS summary data file is missing.'))
+    q()
+  } 
   if (file.exists(gwasinput)){
     suppressWarnings(dir.create(paste0(prsdir, 'summary_gemma/')))
     sumraw0 = bigreadr::fread2(gwasinput)
     # impute position info:
-    ref = bigreadr::fread2(paste0(eval_ld_ref_path, LDrefpanel, '_hm3_', race.dbslmm, '_ref.bim'))[,c(2,4)]
-    colnames(ref) = c('SNP', 'ps')
+    ref = bigreadr::fread2(paste0(dbslmm_path, 'LDref/', race.dbslmm, '/merge.bim'))[,c(2,4,5,6)]
+    colnames(ref) = c('SNP', 'ps', 'ref', 'alt')
+    ref = ref[ref$SNP %in% sumraw0$SNP, ]
     sumraw0 = merge(sumraw0, ref, by = 'SNP')
     sumraw0$n_mis = max(sumraw0$N) - sumraw0$N
-    sumraw0 = sumraw0[,c('CHR', 'SNP', 'ps', 'n_mis', 'N', 'A1', 'A2', 'MAF', 'BETA', 'SE', 'P')] # allele1 <-> A1: REF
+    # # Match with reference data:
+    # flipped = which(sumraw0$ref != sumraw0$A1)
+    # # print(paste0(length(flipped), ' flipped SNPs.'))
+    # if (length(flipped) > 0){
+    #   sumraw0[flipped,'A1'] = sumraw0[flipped,'ref']
+    #   sumraw0[flipped,'A2'] = sumraw0[flipped,'alt']
+    #   sumraw0[flipped,paste0('BETA')] = - sumraw0[flipped,paste0('BETA')]
+    # }
+    sumraw0 = sumraw0[,c('CHR', 'SNP', 'ps', 'n_mis', 'N', 'A1', 'A2', 'MAF', 'BETA', 'SE', 'P')] # allele1 <-> A1: REF: effect allele
     colnames(sumraw0) = c('chr', 'rs',  'ps',  'n_mis',   'n_obs',   'allele1', 'allele0', 'af',  'beta', 'se', 'p_wald')
-    for (chr in 1:22){
-      sumdat.file = paste0(prsdir, 'summary_gemma/chr', chr, '.assoc.txt')
-      sumraw = sumraw0[sumraw0$chr == chr, ]
-      write_delim(sumraw, sumdat.file, delim = '\t', col_names = F)
-      rm(sumraw)
-    }
+    # allele1: REF, effect allele
+    
+    # for (chr in 1:22){
+    #   sumdat.file = paste0(prsdir, 'summary_gemma/chr', chr, '.assoc.txt')
+    #   sumraw = sumraw0[sumraw0$chr == chr, ]
+    #   write_delim(sumraw, sumdat.file, delim = '\t', col_names = F)
+    #   rm(sumraw)
+    # }
+    # # ALL CHROMOSOMES:
+    sumdat.file = paste0(prsdir, 'summary_gemma/all.assoc.txt')
+    write_delim(sumraw0, sumdat.file, delim = '\t', col_names = T)
+    rm(sumraw0)
     print(paste0('Generating input GWAS data for ', method, ': completed.'))
-  }
-  
-  # --------------------- Step 1.2: Run DBSLMM ---------------------
-  system(paste0('chmod 777 ', dbslmm_path, 'dbslmm'))
-  for (chr in 1:22) {
-    # cat(paste0('Rscript ${DBSLMM} --summary ${summf}${chr}.assoc.txt --outPath ${outPath} --plink ${plink} 
-    #            --dbslmm ${dbslmm} --ref ${ref}${chr} --model ${model} --n ${n} --nsnp ${m} --block ${blockf}${chr}.bed 
-    #            --h2 ${herit} --thread ', NCORES,'\n\n'), file = zz)
-    summf = paste0(prsdir, 'summary_gemma/chr')
+    
+    # --------------------- Step 1.2: Run DBSLMM ---------------------
+    system(paste0('chmod 777 ', dbslmm_path, 'dbslmm'))
+    summf = paste0(prsdir, 'summary_gemma/')
     outPath = paste0(prsdir, 'output/')
-    tem = bigreadr::fread2(paste0(prsdir, 'summary_gemma/chr',chr,'.assoc.txt'))
+    tem = bigreadr::fread2(paste0(summf, 'all.assoc.txt'))
     n = mean(tem[,4] + tem[,5])
     dbslmmcode = paste(paste0('Rscript ', dbslmm_path, 'software/DBSLMM.R'),
-                      paste0('--summary ', summf, chr, '.assoc.txt'), 
-                      paste0('--outPath ', outPath),
-                      paste0('--plink ', plink_path, 'plink'),
-                      paste0('--dbslmm ', dbslmm_path, 'dbslmm'),
-                      paste0('--ref ', PennPRS_path, 'LD/', race.dbslmm, '/1KGref_plinkfile/chr', chr),
-                      paste0('--model DBSLMM'),
-                      paste0('--n ', n),
-                      paste0('--nsnp ', nrow(tem)),
-                      paste0('--block ', dbslmm_path, 'block_data/', race.dbslmm, '/chr', chr, '.bed'),
-                      paste0('--h2 ', ldsc_h2_est),
-                      paste0('--thread ', NCORES))
+                       paste0('--summary ', summf, 'all.assoc.txt'), 
+                       paste0('--outPath ', outPath),
+                       paste0('--type auto'),
+                       paste0('--N ', n),
+                       paste0('--dbslmm ', dbslmm_path, 'dbslmm'),
+                       # paste0('--ref ', PennPRS_path, 'LD/', race.dbslmm, '/1KGref_plinkfile/1kg_hm3_EUR_ref'),
+                       paste0('--reference ', dbslmm_path, 'LDref/', race.dbslmm),
+                       paste0('--model DBSLMM'),
+                       paste0('--block ', dbslmm_path, 'block_data/', race.dbslmm, '/'))
     system(dbslmmcode)
-    print(paste0('Complete training ', method, ' for CHR ', chr))
-  }
-  
-  
-  # --------------------- Step 1.3: Reformat the trained PRS weight file: ---------------------
-  score = NULL
-  for(chr in c(1:22)){
-    temfile = paste0(prsdir, 'output/chr', chr, '.dbslmm.txt')
-    if(file.exists(temfile)){
-      scoretemp = bigreadr::fread2(temfile)[, c(1, 2, 4)] # BETA corresponds to A1
-      colnames(scoretemp) = c('SNP', 'A1', 'BETA')
-      scoretemp$CHR = chr
-      ref = bigreadr::fread2(paste0(eval_ld_ref_path, 'chr', chr, '.bim'))[,c(2,5,6)]
-      colnames(ref) = c('SNP', 'A1.ref', 'A2.ref')
-      scoretemp = merge(scoretemp, ref, by = 'SNP')
-      scoretemp$A2 = ifelse(scoretemp$A1 == scoretemp$A1.ref, scoretemp$A2.ref, scoretemp$A1.ref)
-      scoretemp = scoretemp[,c(4,1,2,7,3)]
-      colnames(scoretemp) = c('CHR','SNP','A1','A2','BETA')
-      score = rbind(score, scoretemp)
-      rm(scoretemp)
-      # print(paste0('Chr ', chr,' Completed'))
+    print(paste0('Complete training ', method, ' PRS across all chromosomes.'))
+    
+    
+    # --------------------- Step 1.3: Reformat the trained PRS weight file: ---------------------
+    ref = ref[, c(1,3,4)]
+    colnames(ref) = c('SNP', 'A1.ref', 'A2.ref')
+    
+    score = NULL
+    for(chr in c(1:22)){
+      temfile = paste0(prsdir, 'output/all_chr', chr, '.dbslmm.txt')
+      if(file.exists(temfile)){
+        if (file.info(temfile)$size > 0){
+        scoretemp = bigreadr::fread2(temfile)[, c(1, 2, 4)] # BETA corresponds to A1
+        colnames(scoretemp) = c('SNP', 'A1', 'BETA')
+        scoretemp$CHR = chr
+        scoretemp = merge(scoretemp, ref, by = 'SNP')
+        scoretemp$A2 = ifelse(scoretemp$A1 == scoretemp$A1.ref, scoretemp$A2.ref, scoretemp$A1.ref)
+        scoretemp = scoretemp[,c(4,1,2,7,3)]
+        colnames(scoretemp) = c('CHR','SNP','A1','A2','BETA')
+        score = rbind(score, scoretemp)
+        rm(scoretemp)
+        # print(paste0('Chr ', chr,' Completed'))
+        }
+      }
+      if(!file.exists(temfile)) print(paste0('No SNP in Chromosome ', chr, ' was included in the PRS model.'))
     }
-    if(!file.exists(temfile)) print(paste0('Chromosome ', chr, ' has zero SNP left in the model.'))
-  }
-  print(paste0('Combining fitted models across chromosomes: completed.'))
-  score = score[,c('CHR','SNP','A1','A2','BETA')]
-  
-  # Match alleles with GWAS summary data:
-  stateval = bigreadr::fread2(paste0(workdir, 'sumdata/',trait_name,'.txt'))
-  stateval = stateval[, c('SNP','A1','A2')]
-  colnames(stateval) = c('SNP', 'A1.ref','A2.ref')
-  stateval = merge(stateval, score, by = 'SNP')
-  flipped = which(stateval$A1.ref != stateval$A1)
-  print(paste0(length(flipped), ' flipped SNPs.'))
-  if (length(flipped) > 0){
-    stateval[flipped,'A1'] = stateval[flipped,'A1.ref']
-    stateval[flipped,'A2'] = stateval[flipped,'A2.ref']
-    stateval[flipped,paste0('BETA')] = - stateval[flipped,paste0('BETA')]
-  }
-  scores = stateval[,c('CHR','SNP','A1','A2','BETA')] # other files: SNP	CHR	A1	BETA1	BETA2	A2
-  write_delim(scores, file = paste0(workdir, trait_name,'.',method,'.PRS.txt'), delim='\t')
-  # write.table(scores, paste0(input_path, trait_name,'.',method, '.ite',ite,'.txt'), row.names = F,col.names = T, quote = FALSE, sep = "\t" )
-  if (opt$verbose >= 1 ){
-    print(paste0('****************************************'))
-    print(paste0('******* Complete training DBSLMM *******'))
-    print(paste0('****************************************'))
+    print(paste0('Combining trained PRS models across chromosomes: completed.'))
+    
+    # Match alleles with GWAS summary data:
+    stateval = bigreadr::fread2(paste0(workdir, 'sumdata/',trait_name,'.txt'))
+    stateval = stateval[, c('SNP','A1','A2')]
+    colnames(stateval) = c('SNP', 'A1.ref','A2.ref')
+    stateval = merge(stateval, score, by = 'SNP')
+    flipped = which(stateval$A1.ref != stateval$A1)
+    print(paste0(length(flipped), ' flipped SNPs.'))
+    if (length(flipped) > 0){
+      stateval[flipped,'A1'] = stateval[flipped,'A1.ref']
+      stateval[flipped,'A2'] = stateval[flipped,'A2.ref']
+      stateval[flipped,paste0('BETA')] = - stateval[flipped,paste0('BETA')]
+    }
+    scores = stateval[,c('CHR','SNP','A1','A2','BETA')] # other files: SNP	CHR	A1	BETA1	BETA2	A2
+    write_delim(scores, file = paste0(workdir, trait_name,'.',method,'.PRS.txt'), delim='\t')
+    # write.table(scores, paste0(input_path, trait_name,'.',method, '.ite',ite,'.txt'), row.names = F,col.names = T, quote = FALSE, sep = "\t" )
+    if (opt$verbose >= 1 ){
+      print(paste0('****************************************'))
+      print(paste0('******* Complete training DBSLMM *******'))
+      print(paste0('****************************************'))
+    }
   }
 }
 
+
+# Save the final PRS models generated by each single methods to the working directory
+for (method in methods){
+  tfile = paste0(workdir, trait_name,'.',method,'.PRS.txt')
+  if (file.exists(tfile)) {
+    SCORE = bigreadr::fread2(tfile)
+    # Update output file format according to the pgsc_calc pipeline from the PGS Catalog
+    SCORE = merge(SCORE, ref.bim, by = 'SNP')
+    SCORE = SCORE[, c('CHR','SNP','chr_position','A1','A2', 'BETA')]
+    colnames(SCORE) = c('chr_name','rsid','chr_position','effect_allele','other_allele', 'effect_weight')
+    write_delim(SCORE, paste0(workdir, trait_name,'.',method,'.PRS.txt'))
+  }
+}
 
 
 # ------------------------------------------------------------------------------------------------------
 # ------------------------ Step 5: Write log files and delete intermediate files -----------------------
 # ------------------------------------------------------------------------------------------------------
-filen<-paste0(workdir, 'PRS_model_training_info_', trait_name, '.txt')
+filen<-paste0(workdir, 'PRS_INFO.txt')
 file.create(filen)
-zz <- file(filen, "w")
+zz <- file(filen, "wt")
 
-print.title = paste0("Summary of PRS model Training on ",trait, " for ", race)
-cat(paste0("\n",paste(rep('*', nchar(print.title)+10),collapse='')), file = zz)
-cat(paste0("\n**** ", print.title, " ****"), file = zz)
-cat(paste0("\n",paste(rep('*', nchar(print.title)+10),collapse=''),'\n'), file = zz)
+on.exit({
+  try(close(zz), silent = TRUE)
+}, add = TRUE)
 
-if ('PRS-CS-auto' %in% methods){
-  cat(paste0("\n******************************************************"), file = zz)
-  cat(paste0("\n******************** PRS-CS-auto *********************"), file = zz)
-  cat(paste0("\n******************************************************"), file = zz)
-  method = 'PRS-CS-auto'
-  prsdir = paste0(prsdir0, method,'/')
-  tfile = paste0(workdir, trait_name,'.',method,'.PRS.txt')
-  if (file.exists(tfile)){
-    if (is.na(phi)){
-      cat(paste0('\nSince phi is not specified, it was learnt from the data using a fully Bayesian approach. A PRS model was then trained by PRS-CS-auto with the estimated phi value.\n'), file = zz)
+# print.title = paste0("Summary of PRS model Training on ",trait, " for ", race)
+# cat(paste0("\n",paste(rep('*', nchar(print.title)+10),collapse='')), file = zz)
+# cat(paste0("\n**** ", print.title, " ****"), file = zz)
+# cat(paste0("\n",paste(rep('*', nchar(print.title)+10),collapse=''),'\n'), file = zz)
+
+write_line <- function(...) {
+  cat(paste0(...), "\n", file = zz, append = TRUE, sep = "")
+}
+
+write_section <- function(title) {
+  write_line("")
+  write_line(paste(rep("=", 70), collapse = ""))
+  write_line(title)
+  write_line(paste(rep("=", 70), collapse = ""))
+}
+
+write_subsection <- function(title) {
+  write_line("")
+  write_line(title)
+  write_line(paste(rep("-", nchar(title)), collapse = ""))
+}
+
+# --------------------------------------------------
+# Header
+# --------------------------------------------------
+write_line("PRS INFORMATION REPORT")
+write_line("")
+write_line(paste0("Trait: ", trait))
+write_line(paste0("Ancestry: ", race))
+write_line(paste0("Generated: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+write_line(paste0("Methods requested: ", paste(methods, collapse = ", ")))
+
+# --------------------------------------------------
+# Overview
+# --------------------------------------------------
+write_section("1. OVERVIEW")
+write_line("This file summarizes details of the PRS model training process and provides example")
+write_line("commands for calculating PRS using the trained model.")
+
+# --------------------------------------------------
+# Training summary
+# --------------------------------------------------
+write_section("2. SUMMARY OF PRS MODEL TRAINING")
+methods.completed = NULL
+if ("LDpred2-auto" %in% methods) {
+  method <- "LDpred2-auto"
+  prsdir <- paste0(prsdir0, method, "/")
+  tfile <- paste0(workdir, trait_name, ".", method, ".PRS.txt")
+  
+  write_subsection("LDpred2-auto (June 8, 2023 Version)")
+  write_line("* Reference documentation:")
+  write_line("  https://privefl.github.io/bigsnpr/articles/LDpred2.html#ldpred2-auto-automatic-model")
+  
+  if (file.exists(tfile)) {
+    methods.completed = c(methods.completed, method)
+    write_line("* Model training status: completed.")
+    write_line(paste0("* Output score file: ", trait_name, ".", method, ".PRS.txt"))
+    write_line("* Parameter specifications:")
+    write_line('  - Shrinkage multiplicative coefficient applied to the off-diagonal elements of the correlation matrix: shrink_corr = ', coef_shrink)
+    write_line('  - Allow for effects sizes to change sign in consecutive iterations? ', ifelse(allow_jump_sign, 'Yes.', 'No.'))
+    write_line('  - ', ifelse(use_MLE, 'Used maximum likelihood estimation (MLE) to estimate alpha and the variance component (since version 1.11.4).', 
+                                'Assume alpha = -1 and estimate the variance of (scaled) effects by h2/(m*p), as in earlier versions (e.g. v1.10.8).'))
+    
+    # write_line("  - shrink_corr = ", coef_shrink)
+    # write_line("  - allow_jump_sign = ", ifelse(isTRUE(allow_jump_sign), "Yes", "No"))
+    # write_line(
+    #   "  - alpha / variance estimation: ",
+    #   ifelse(isTRUE(use_MLE),
+    #          "maximum likelihood estimation (MLE) was used",
+    #          "alpha was fixed at -1 and variance was estimated as in earlier LDpred2-auto versions")
+    # )
+    
+    if (length(keep) == 0) {
+      write_line("")
+      write_line("WARNING:")
+      write_line("  All 30 LDpred2-auto chains were deemed bad chains.")
+      write_line("  The resulting PRS model may have limited predictive power.")
+      write_line("  Possible explanations include:")
+      write_line("    1. The trait has low heritability.")
+      write_line("    2. The GWAS summary statistics have insufficient power (e.g., due to small sample size).")
+      write_line("    3. The input GWAS summary data contains problematic values (e.g., BETA or SE).")
+      write_line("    4. LDpred2-auto may not be well suited for this trait, and other methods can be considered instead.")
     }
-    if (!is.na(phi)){
-      cat(paste0('\nA PRS model was trained by PRS-CS-auto with a pre-specified phi value ', phi, '.\n'), file = zz)
-    }
-  }
-  if (!file.exists(tfile)){
-    cat(paste0('\nNo PRS model was generated. Please check log file for potential issues.\n'), file = zz)
+  } else {
+    write_line("* Model training status: no PRS model was generated.")
+    write_line("* Please check log file for details.")
   }
 }
 
-if ('LDpred2-auto' %in% methods){
-  cat(paste0("\n*****************************************************"), file = zz)
-  cat(paste0("\n******** LDpred2-auto (June 8, 2023 Version) ********"), file = zz)
-  cat(paste0("\n*****************************************************"), file = zz)
-  cat(paste0("\n* Please refer to https://privefl.github.io/bigsnpr/articles/LDpred2.html#ldpred2-auto-automatic-model for detailed implementation of LDpred2-auto."), file = zz)
-  method = 'LDpred2-auto'
-  prsdir = paste0(prsdir0, method,'/')
-  tfile = paste0(workdir, trait_name,'.',method,'.PRS.txt')
-  if (file.exists(tfile)){
-    cat(paste0("\n* Parameter specifications:"), file = zz)
-    cat(paste0('\n  - Shrinkage multiplicative coefficient applied to the off-diagonal elements of the correlation matrix: shrink_corr = ', coef_shrink), file = zz)
-    cat(paste0('\n  - Allow for effects sizes to change sign in consecutive iterations? ', ifelse(allow_jump_sign, 'Yes.', 'No.')), file = zz)
-    cat(paste0('\n  - ', ifelse(use_MLE, 'Used maximum likelihood estimation (MLE) to estimate alpha and the variance component (since version 1.11.4).', 
-                              'Assume alpha = -1 and estimate the variance of (scaled) effects by h2/(m*p), as in earlier versions (e.g. v1.10.8).')), file = zz)
-    if (length(keep) == 0){
-      cat(paste0('\n##### [Note] All 30 chains in ', method, ' were deemed bad chains, and the resulting PRS model may not have sufficient power. \nPotential explanations:\n 1. The trait is not heritable.\n 2. The GWAS have insufficient power (e.g., due to low sample size) to develop a predictive PRS.\n 3. Issues with the input GWAS summary data (e.g., problematic BETA or SE).\n 4. ', method, ' is not powerful for developing PRS for the trait, in which case other methods can be considered.'), file = zz)
-    }
-  }
-  if (!file.exists(tfile)){
-    cat(paste0('\nNo PRS model was generated. Please check log file for potential issues.\n'), file = zz)
-  }
-}
-
-if ('DBSLMM' %in% methods){
-  cat(paste0("\n*****************************************************"), file = zz)
-  cat(paste0("\n******************* DBSLMM (V0.3) *******************"), file = zz)
-  cat(paste0("\n*****************************************************"), file = zz)
-  cat(paste0("\n* Please refer to https://biostat0903.github.io/DBSLMM/Manual.html for detailed implementation of DBSLMM."), file = zz)
-  method = 'DBSLMM'
-  prsdir = paste0(prsdir0, method,'/')
-  tfile = paste0(workdir, trait_name,'.',method,'.PRS.txt')
-  if (file.exists(tfile)){
-    cat(paste0("\n* DBSLMM default version was implemented with:"), file = zz)
-    cat(paste0('\n  - p-value threshold: 1e-06'), file = zz)
-    cat(paste0('\n  - LD threshold: 0.2'), file = zz)
-  }
-  if (!file.exists(tfile)){
-    cat(paste0('\nNo PRS model was generated. Please check log file for potential issues.\n'), file = zz)
+if ("DBSLMM" %in% methods) {
+  method <- "DBSLMM"
+  prsdir <- paste0(prsdir0, method, "/")
+  tfile <- paste0(workdir, trait_name, ".", method, ".PRS.txt")
+  
+  write_subsection("DBSLMM (V1.0 User Friendly Version)")
+  write_line("* Reference documentation:")
+  write_line("  https://github.com/biostat0903/DBSLMM")
+  
+  if (file.exists(tfile)) {
+    methods.completed = c(methods.completed, method)
+    write_line("* Model training status: completed")
+    write_line(paste0("* Output score file: ", trait_name, ".", method, ".PRS.txt"))
+    write_line("* DBSLMM default (automatic) version used:")
+    write_line("  - p-value threshold = 1e-06")
+    write_line("  - LD threshold = 0.2")
+  } else {
+    write_line("* Model training status: no PRS model was generated.")
+    write_line("* Please check log file for details.")
   }
 }
 
-close(zz)
+
+# --------------------------------------------------
+# Example: compute PRS with PLINK2
+# --------------------------------------------------
+if (length(methods.completed) > 0){
+  write_section("3. EXAMPLE CODE FOR COMPUTING PRS BASED ON THE GENERATED SCORE FILES")
+  write_line(paste0("   Example genotype data (prefix): PennPRS/test/evaldir/eval.{bim,bed,fam}"))
+  example_score_file = paste0(trait_name, ".", methods.completed[1], ".PRS.txt")
+  write_line(paste0("   Example score file: ", example_score_file))
+  
+  write_section("3.1. Example Command for Comuting PRS using PLINK2")
+  # write_line("")
+  # write_line("Expected score file columns:")
+  # write_line("  1. Variant ID")
+  # write_line("  2. Effect allele")
+  # write_line("  3. SNP weight")
+  write_line("")
+  
+  # write_line("Example score file:")
+  # write_line(example_score_file)
+  
+  # write_line("")
+  write_line("Example PLINK2 command:")
+  write_line("")
+  write_line("PennPRS/software/plink2 \\")
+  write_line("    --bfile PennPRS/test/evaldir/eval \\")
+  write_line("    --score ", example_score_file, " 2 3 5 cols=+scoresums,-scoreavgs \\")
+    write_line("    --out PRS_", trait_name, ".", methods.completed[1])
+    write_line("    --threads 1")
+    write_line("")
+    write_line("Notes:")
+    write_line("  - Replace the score file path and genotype data path with your actual file paths.")
+    # write_line("  - Try the example provided in {PennPRS/test/Testing PennPRS with an Example.md}.")
+    write_line("  - See https://www.cog-genomics.org/plink/2.0/score for further information.")
+    
+    # --------------------------------------------------
+    # Example: compute PRS with pscs_calc
+    # --------------------------------------------------
+    write_section("3.2. COMPUTING PRS USING pscs_calc")
+    write_line("The pgsc_calc is a tool for calculating PRS using score files published in the PGS Catalog or custom scoring files.")
+    write_line("To calculate PRS using pgsc_calc, please install pgsc_calc following the instructions at https://pgsc-calc.readthedocs.io/en/latest/ first.")
+    write_line("Prepare required files:")
+    write_line("   1. Genotype data (pfile, bfile, or vcf) with prefix: temppath/genotype_data (e.g., PennPRS/test/evaldir/eval.{bim,bed,fam}).")
+    write_line("   2. Samplesheet.csv (store genotype data information, save under the same folder: temppath).")
+    write_line("   3. Update score file with format required by pgsc_calc: temppath/", trait_name, ".", methods.completed[1], "_for_pgsc_calc.txt (save under the same folder: temppath)")
+    
+    write_line("")
+    write_line("Example pscs_calc command:")
+    write_line("")
+    write_line("path/to/nextflow run path/to/pgsc_calc \\")
+    write_line("    -profile test,docker \\")
+    write_line("    --input temppath/samplesheet.csv \\")
+    write_line("    --scorefile temppath/", trait_name, ".", methods.completed[1], "_for_pgsc_calc.txt")
+    write_line("")
+    write_line("Notes:")
+    write_line("  - Replace path/to/nextflow, path/to/pgsc_calc, and temppath/ with your actual paths.")
+    write_line("  - Generated PRS file can be found in pgsc_calc/results/.")
+    # write_line("  - Try the example provided in {PennPRS/test/Testing PennPRS with an Example.md}.")
+    write_line("  - See https://pgsc-calc.readthedocs.io/en/latest/ for further information.")
+}
+
+write_line("")
+# write_line("PRS information report completed.")
+
+invisible(filen)
+
+
 
 
 
@@ -505,19 +591,24 @@ zz <- file(filen, "w")
 
 print.title = paste0("List of Contents:") # ,trait, " for ", race
 cat(paste0("\n",paste(rep('*', nchar(print.title)+10),collapse='')), file = zz)
-cat(paste0("\n* ", print.title, " ****"), file = zz)
+cat(paste0("\n**** ", print.title, " ****"), file = zz)
 cat(paste0("\n",paste(rep('*', nchar(print.title)+10),collapse=''),'\n'), file = zz)
+
+cat(paste0('\n* Report on GWAS QC procedure:'), file = zz)
+cat(paste0('\n  QC_report.html\n'), file = zz)
+
 cat(paste0('\n* PRS models trained by tuning-parameter-free methods:'), file = zz)
 for (method in methods){
   prsfile = paste0(workdir, trait_name,'.',method, '.PRS.txt')
   if (file.exists(prsfile)) cat(paste0('\n  ', trait_name,'.',method, '.PRS.txt'), file = zz)
 }
 
-cat(paste0('\n\n* Details of the PRS training:'), file = zz)
-cat(paste0('\n  PRS_model_training_info_', trait_name, '.txt\n'), file = zz)
+cat(paste0('\n\n* Details of PRS model training and instructions on PRS computing:'), file = zz)
+cat(paste0('\n  PRS_INFO.txt\n'), file = zz)
 close(zz)
 
 
+cat(paste0('Job completed. Results are saved in: ', workdir))
 
 
 # Clean up intermediate files:

@@ -118,3 +118,9 @@ preprocess = function(sumstats, maf.thr = 0.05){
   
   return(list(sumstats.all = sumstats.all, traitvec = names(sumstats)))
 }
+
+
+
+
+
+
