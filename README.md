@@ -42,7 +42,7 @@ Download LD reference data files for different populations and save the uncompre
 
 If you intend to run PRS-CSx, please download and save an additional [SNP information file](https://www.dropbox.com/scl/fi/0i74j1kpz24unfy82itsj/snpinfo_mult_1kg_hm3?rlkey=mhzcfm83v0jxdoemlsw8we716&e=1&dl=0) to `/PennPRS/LD/` by `curl -L -o snpinfo_mult_1kg_hm3 "https://www.dropbox.com/scl/fi/0i74j1kpz24unfy82itsj/snpinfo_mult_1kg_hm3?rlkey=mhzcfm83v0jxdoemlsw8we716&e=1&dl=1"` 
 
-If you intend to run DBSLMM, please download the LD reference data for the ancestries of interest provided by the [DBSLMM team](https://drive.google.com/drive/folders/1tC5dT6f2otpY0iXMPRzIxfihERHyURr0) and save the folder(s) in `PennPRS/software/DBSLMM/LDref/`.
+If you intend to run DBSLMM, please additionally download the [LD files](https://drive.google.com/drive/folders/1tC5dT6f2otpY0iXMPRzIxfihERHyURr0) for the ancestries of interest provided by the DBSLMM team and save the folder(s) in `PennPRS/software/DBSLMM/LDref/`.
 
 Before running the pipeline, please consider the following quality control (QC) steps for the input GWAS summary data:
 
@@ -52,9 +52,10 @@ Before running the pipeline, please consider the following quality control (QC) 
 
 ## Enviroment Set Up
 
-In `/PennPRS/`, create and activate the conda environment so all dependencies are available:
+Create and activate the conda environment so all dependencies are available:
 
 ```bash
+cd PennPRS
 conda env create -f environment.yml
 conda activate pennprs
 ```
@@ -74,7 +75,7 @@ We did not set automatic installation of R packages because on servers or HPC sy
 
 
 ## PRS method options
-PennPRS supports the following PRS pseudo-training and tuning-parameter-free methods. Please navigate to **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)** for the implementation of each method.
+PennPRS supports the following PRS pseudo-training and tuning-parameter-free methods. Please navigate to the **[ Wiki page](https://github.com/PennPRS/Pipeline/wiki)** for the implementation of each method.
 
 [Single-Ancestry PRS Modeling](https://github.com/PennPRS/Pipeline/wiki/2.-Single%E2%80%90Ancestry-PRS-Modeling)
   1. C+T-pseudo
@@ -96,20 +97,19 @@ PennPRS supports the following PRS pseudo-training and tuning-parameter-free met
 
 Each output folder contains the following contents:
 
-1. README.txt
-   List of contents in the output folder.
-2. QC_report.txt - QC process for the input GWAS summary statistics file, including input data format check (detecting required columns) and standard QC steps applied to GWAS summary data for PRS training
+1. README.txt - list all contents in the output folder.
+2. QC_report.txt - QC process for the input GWAS summary statistics file, including data format check and standard QC steps for PRS training
 3. PRS_INFO.txt - a summary report for PRS training, including:
-   (1) method versions, tuning parameter settings, optimized tuning parameter values
-   (2) example code for calculating PRS based on the trained PRS models using [PLINK2](https://www.cog-genomics.org/plink/2.0/score) or [pgsc_calc](https://pgsc-calc.readthedocs.io/en/latest/).
+   - method versions, tuning parameter settings, optimized parameter values
+   - example code for calculating PRS based on the trained PRS models using PLINK2 or [pgsc_calc](https://pgsc-calc.readthedocs.io/en/latest/).
 4. Trained PRS models:
-   SNP weight files for the trained PRS models (`{ancestry}_{trait}_{method}.txt`)
+   - SNP weight files (`{ancestry}_{trait}_{method}.txt`)
    
    
 
 ## Query Data with PennPRS
 
-We provide the option to directy query public, harmonized GWAS summary data files from the following two GWAS databases:
+We provide the option to directly query public, harmonized GWAS summary data files from the following two GWAS databases:
   1. [The GWAS Catalog](https://www.ebi.ac.uk/gwas/)
   2. [FinnGen](https://www.finngen.fi/en/access_results) (Note: FinnGen requires filling out an online form before downloading)
 
@@ -165,36 +165,36 @@ python code/query_data.py finngen F5_ALZHDEMENT
 
 ## Evaluation of the Trained PRS models with Individual-Level Data 
 
-We provide a pipeline for evaluating the performance of the trained PRS models on an individual-level dataset provided by the user. 
+We provide a mode for evaluating the performance of the trained PRS models on an individual-level dataset provided by the user. 
 
-### Example
+**Example**
 
 Input files:
 
 1. PRS model files: saved in `$PennPRS/test/Evaluation/PRSdir/`.
-
 2. Individual-level data for evaluation purpose:
-
   - genotype data in PLINK format: `$PennPRS/test/Evaluation/geno/validation.{bim,bed,fam}` <br>
   - phenotype data: $PennPRS/test/Evaluation/PRSdir/pheno.txt.
-    
-    # Input Arguments
-    PennPRS_path='PennPRS/'
-    homedir="$PennPRS_path/test/Evaluation/output/"
-    phenofile="$PennPRS_path/test/Evaluation/pheno/pheno.txt"
-    bfile="$PennPRS_path/test/Evaluation/geno/validation"
-    PRSdir="$PennPRS_path/test/Evaluation/PRSdir/"
-    ID_col_num='1'
-    pheno_col_num='2'
-    covar_col_nums='3-44'
-    
-    # Job Submission
-    sbatch test/job_submission/Evaluation.sh ${PennPRS_path} ${homedir} ${phenofile} ${bfile} ${PRSdir} ${ID_col_num} ${pheno_col_num} ${covar_col_nums}
+
+```  
+# Input Arguments
+PennPRS_path='PennPRS/'
+homedir="$PennPRS_path/test/Evaluation/output/"
+phenofile="$PennPRS_path/test/Evaluation/pheno/pheno.txt"
+bfile="$PennPRS_path/test/Evaluation/geno/validation"
+PRSdir="$PennPRS_path/test/Evaluation/PRSdir/"
+ID_col_num='1'
+pheno_col_num='2'
+covar_col_nums='3-44'
+
+# Job Submission
+sbatch test/job_submission/Evaluation.sh ${PennPRS_path} ${homedir} ${phenofile} ${bfile} ${PRSdir} ${ID_col_num} ${pheno_col_num} ${covar_col_nums}
+```
 
 **CLI options**
 
 | Option | Description |
-|--------|-------------|
+|--------------|-------------|
 | `--PennPRS_path` | Path to PennPRS (required). |
 | `--homedir` | Folder where the output results are saved (required). |
 | `--phenofile` | Path to the individual-level phenotype data file for PRS model evaluation. The file can be in either .txt, .tsv, .csv, or .xlsx format, with required columns for individual ID and phenotype value, and optional columns for covariate information (required). |
@@ -202,13 +202,7 @@ Input files:
 | `--PRSdir` | Path to the folder the PRS model files are saved in. Do not change file names, keep the original file names generated by PennPRS as they are (required). |
 | `--ID_col_num` | Column number for individual ID (required). |
 | `--pheno_col_num` | Column number for phenotype value (required). |
-| `--covar_col_nums` | Column number(s) for covariate information (Optional). |
-
-**Exit codes**
-
-- `0` — every selected test was submitted **and** passed verification
-- `1` — any failure.
-- `2` — invalid invocation.
+| `--covar_col_nums` | Column number(s) for covariate information (optional). |
 
 
 Please refer to the [tutorial](https://github.com/PennPRS/Pipeline/wiki/4.-Model-Evaluation-with-Individual%E2%80%90Level-Data) for details.
@@ -217,9 +211,7 @@ Please refer to the [tutorial](https://github.com/PennPRS/Pipeline/wiki/4.-Model
 ## Automated Testing
 
 A SLURM-driven test harness for the worked examples in [Wiki § 5. Test Examples](https://github.com/PennPRS/Pipeline/wiki/5.-Test-Examples)
-is provided under [`test-runner/`](./test-runner). The harness submits each example (5.1 – 5.7) via `sbatch`, monitors job completion, and verifies that
-the expected output artifacts (SNP weight files, evaluation results, etc.) are produced and non-empty. This enables end-to-end
-pipeline testing on any SLURM-managed cluster.
+is provided under [`test-runner/`](./test-runner). It allows end-to-end pipeline testing on any SLURM-managed cluster.
 
 Usage:
 
@@ -231,9 +223,6 @@ cd test-runner
 ./run_all.sh --parallel 4         # run all examples, up to 4 concurrently
 ```
 
-Configuration (cluster paths, partitions, wall-time, memory) is centralized
-in [`test-runner/tests.yaml`](./test-runner/tests.yaml). 
-
 To conduct an automated pipeline testing, please go to 
 [`test-runner/README.md`](./test-runner/README.md) for full setup
 instructions, the complete test matrix, details of the verification
@@ -243,20 +232,19 @@ model, and test examples.
 
 
 
-
 ## Demo and Memory & Runtime Information
-We have provided example GWAS summary datasets and the corresponding outputs can be found in Sections 2.1 - 2.4 in **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)**.
-The average run time for completing a job that runs C+T-pseudo, Lassosum2-pseudo, LDpred2-pseudo, and ensemble PRS for ~1.2 million HapMap3 SNPs using 2 CPUs (with 30 GB RAM) is approximately 2.5 hours, while increasing to 4 CPUs reduced the run time to approximately two hours.
-With ~1.2 million SNPs, single-ancestry analysis pipelines typically require 30GB memory, while for multi-ancestry analysis pipelines, it is recommended that a 25GB * #ancestries is requested to ensure job completion.
+- We have provided example GWAS summary datasets and the corresponding outputs can be found in Sections 2.1 - 2.4 in **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)**.
+- The average run time for completing a job that runs C+T-pseudo, Lassosum2-pseudo, LDpred2-pseudo, and ensemble PRS for ~1.2 million HapMap3 SNPs using 2 CPUs (with 30 GB RAM) is approximately 2.5 hours, while increasing to 4 CPUs reduced the run time to approximately two hours.
+- With ~1.2 million SNPs, single-ancestry analysis pipelines typically require 30GB memory, while for multi-ancestry analysis pipelines, it is recommended that a 25GB * #ancestries is requested to ensure job completion.
 
-Note: fitting the following models with > 1 million SNPs may generate large temporary files (> 20GB per job), and please make sure you have enough storage space to run multiple jobs in parallel before submitting jobs. 
+- Note: fitting the following models with > 1 million SNPs may generate large temporary files (> 20GB per job), and please make sure you have enough storage space to run multiple jobs in parallel before submitting jobs. 
   
-  LDpred2-pseudo
-  LDpred2-auto
-  lassosum2-pseudo
-  DBSLMM
+    LDpred2-pseudo
+    LDpred2-auto
+    lassosum2-pseudo
+    DBSLMM
   
-The temporary/intermediate files in the output folder will be cleaned up if a job is completed successfully. However, when a job unexpectedly fails, the large temporary files should be manually deleted to free up space, especially the subfolder `/PRS_model_training/`.
+- The temporary/intermediate files in the output folder will be cleaned up if a job is completed successfully. However, when a job unexpectedly fails, the large temporary files should be manually deleted to free up space, especially the subfolder `/PRS_model_training/`.
 
 
 ## Contact
