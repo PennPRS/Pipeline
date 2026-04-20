@@ -159,7 +159,9 @@ cd test-runner/
 
 ### Example Outputs
 
-Reference outputs for every test case are archived on Dropbox. After running
+Reference outputs for every test case are archived on Dropbox.
+
+After running
 the harness, you can compare your local results (located in `$PennPRS_path/test/PennPRSoutput/`) against these to confirm
 correctness.
 
