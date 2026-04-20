@@ -5,8 +5,8 @@
 To use the tool, please follow the instructions in **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)**.
 </br>
 
-A test runner configuration is provided for users to easily test the pipeline in their local environment. To conduct an automated testing, please follow the instructions in  
-[`test-runner/README.md`](./test-runner/README.md).
+A test runner configuration is provided for users to easily test the pipeline in their local environment. To conduct an automated testing, please follow the instructions  
+[here](./test-runner/).
 </br>
 
 ## Version History
@@ -16,8 +16,8 @@ A test runner configuration is provided for users to easily test the pipeline in
     * Added a new [function](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#query-data-with-pennprs), which allows users to directly query harmonized GWAS summary datasets from the GWAS Catalog or FinnGen.<br>
     * Added [Environment setup](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#enviroment-set-up) to ensure all dependencies are available.<br>
     * Added a [test runner configuration](https://github.com/PennPRS/Pipeline/tree/main/test-runner) which allows users enable users to easily run and validate the pipeline in a local environment.<br>
-    * Reorganized structure of the tutorial on the [Wiki](https://github.com/PennPRS/Pipeline/wiki) page with [examples](https://github.com/PennPRS/Pipeline/wiki/4.-Test-Examples) for all supported methods.<br>
-    * Updated the DBSLMM pipeline to the latest V1.0 Version, which requires downloading an additional LD folder (see [SNP information file](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#getting-started)).<br>
+    * Reorganized structure of the tutorial on the wiki page with [examples](https://github.com/PennPRS/Pipeline/wiki/4.-Test-Examples) for all supported methods.<br>
+    * Updated the DBSLMM pipeline to the latest V1.0 Version, which requires downloading an additional LD folder (see [instructions](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#getting-started)).<br>
     
 - [ ] __November 2025:__  Updated code/Tuning-Parameter-Free.R.
 - [ ] __January 2025:__  The PennPRS offline pipeline was made available on Github.
