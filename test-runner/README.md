@@ -19,6 +19,19 @@ test-runner/
 ├── logs/                # Slurm stdout/stderr per job (auto-created)
 └── results/             # per-test records, jobids, verify status
 ```
+## Preparation
+
+Before running the test, please follow the instructions on [pipeline installation](https://github.com/PennPRS/Pipeline/wiki/1.-Installation) and ensure the following steps are completed:
+
+1. LD and supported file downloads: make sure that the LD information for EUR and EAS were successfully downloaded and saved in `PennPRS/LD`.
+2. Environment setup
+
+If needed, please modify the command `module load r` and `module load anaconda` in all the job submission scripts (.sh files) in `test/job_submission/` to match the module configuration on your server.
+To see what R and conda versions are available to load in your system, please run 
+```
+module avail
+```
+
 
 ## Requirements
 
@@ -41,7 +54,7 @@ test-runner/
 ## Setup
 
 1. Edit `tests.yaml`:
-   - Change `PennPRS_path` in line 19 to the path to your PennPRS/ folder.
+   - Change `PennPRS_path` in line 19 to the path to your local cloned PennPRS/ folder.
    - If your cluster uses a different partition / qos than `cpu` /
      `normal`, adjust `globals.slurm` (lines 32 - 36).
    - (Optional) Tweak per-test `slurm.time`, `cpus`, or `mem_per_cpu` if your
@@ -58,8 +71,11 @@ command in `sbatch_args` (line 39 in `test-runner/lib/submit.sh`) as needed for 
 ```bash
 cd test-runner/
 
-# Run every test sequentially (default).
+# Run all examples sequentially (default).
 ./run_all.sh
+
+# Run all examples, submit up to 4 jobs at once (uses sbatch without --wait; polls squeue).
+./run_all.sh --parallel 4
 
 # Just list what is configured.
 ./run_all.sh --list
@@ -73,15 +89,17 @@ cd test-runner/
 # Print the sbatch command the runner would issue, without submitting.
 ./run_all.sh --dry-run --only 5.2a
 
-# Submit up to 4 jobs at once (uses sbatch without --wait; polls squeue).
-./run_all.sh --parallel 4
-
 # Skip submission; re-run existence/schema checks on jobs that already ran.
 ./run_all.sh --verify-only
 ```
 
-Exit code is `0` iff every selected test was submitted **and** passed
-verification; `1` on any failure; `2` on invalid invocation.
+
+**Exit codes**
+
+- `0` — every selected test was submitted **and** passed verification
+- `1` — any failure.
+- `2` — invalid invocation.
+
 
 ## Test matrix
 
@@ -103,22 +121,6 @@ verification; `1` on any failure; `2` on invalid invocation.
 | 5.6b  | 5.6     | PROSPER-pseudo — EUR+EAS binary                     | 11   | 2 G       | 5 h       |
 | 5.7   | 5.7     | Model Evaluation with individual-level data         | 1    | 5 G       | 30 m      |
 
-
-## Verification model
-
-For every PRS model training test, the runner looks for a folder matching
-`*_<submissionID>/` under `globals.homedir`, then asserts:
-
-- at least `expect.min_weight_files` files matching `expect.weight_glob`
-  exist, and
-- the first weight file has at least one non-header data row.
-
-For the evaluation test, the runner checks that
-`evaluation_results.txt` was written with ≥ 1 data row  (header +
-at least one data line).
-
-This catches silent failures that would leave empty or header-only
-output files.
 
 
 ## Outputs
@@ -147,17 +149,15 @@ To test examples in wiki across all supported methods and modes, recommend runni
 ```
 bash
 cd test-runner/
-./run_all.sh --only 5.1
-./run_all.sh --only 5.2
-./run_all.sh --only 5.3
-./run_all.sh --only 5.4
-./run_all.sh --only 5.5
-./run_all.sh --only 5.6
-./run_all.sh --only 5.7
+
+# You can run all examples sequentially
+./run_all.sh
+
+# Or run all examples, submit up to 4 jobs at once, which takes approximately 2-4 hours to complete.
+./run_all.sh --parallel 4
 ```
 
-
-### Example Outputs
+### Test Example Outputs
 
 Reference outputs for every test case are archived on Dropbox.
 
@@ -251,4 +251,9 @@ correctness.
     </tr>
   </tbody>
 </table>
+
+## Runtime and memory
+
+- With less than 2000 SNPs per example GWAS data file, the average run time for completing a job using 11 cores is less than 30 minutes for each single-ancestry job and less than one hour for a multi-ancestry job.
+- Running `./run_all.sh --parallel 4` (run 4 jobs parallel) should take less than 4 hours to complete.
 
