@@ -153,7 +153,7 @@ cd test-runner/
 # You can run all examples sequentially
 ./run_all.sh
 
-# Or run all examples, submit up to 4 jobs at once, which takes approximately 2-4 hours to complete.
+# Or run all examples, submit up to 4 jobs at once, which takes approximately 1.5 - 3 hours to complete.
 ./run_all.sh --parallel 4
 ```
 
@@ -254,6 +254,6 @@ correctness.
 
 ## Runtime and memory
 
+- Running `./run_all.sh --parallel 4` (run 4 jobs parallel) should take less than 3 hours to complete.
 - With less than 2000 SNPs per example GWAS data file, the average run time for completing a job using 11 cores is less than 30 minutes for each single-ancestry job and less than one hour for a multi-ancestry job.
-- Running `./run_all.sh --parallel 4` (run 4 jobs parallel) should take less than 4 hours to complete.
 
