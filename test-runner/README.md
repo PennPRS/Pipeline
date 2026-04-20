@@ -1,4 +1,4 @@
-# PennPRS Test Runner (examples 5.1 – 5.7)
+# PennPRS Test Runner
 
 A SLURM-driven harness that submits the wiki's worked examples
 ([Test Examples 5.1 – 5.7](https://github.com/PennPRS/Pipeline/wiki/5.-Test-Examples))
@@ -175,77 +175,77 @@ correctness.
     <tr>
       <td>5.1a</td>
       <td nowrap><code>testcontinuous_EUR_C+T.lassosum2.LDpred2_SApseudo_continuous/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/5rjdc1jy5bycj248r0u8c/ADevbdWjBLn2_h7njvD3HVo?rlkey=ny13v8exjw9i4hnr75iekkeq9&st=qf54lbeb&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/5rjdc1jy5bycj248r0u8c/ADevbdWjBLn2_h7njvD3HVo?rlkey=ny13v8exjw9i4hnr75iekkeq9&st=qf54lbeb&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.1b</td>
       <td nowrap><code>testbinary_EUR_C+T.lassosum2.LDpred2_SApseudo_binary/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/jhnhe0p4ymz8v81zrpb5c/AIsBVeDgVTb6cG-l5OLBtuc?rlkey=sv0fi31zn6z6rmziqa08n57um&st=3qg1m9rd&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/jhnhe0p4ymz8v81zrpb5c/AIsBVeDgVTb6cG-l5OLBtuc?rlkey=sv0fi31zn6z6rmziqa08n57um&st=3qg1m9rd&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.2a</td>
       <td nowrap><code>testcontinuous_EUR_PRS-CS_PRSCSpseudo_continuous/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/nu9s2vnvnix9ci7cpty6o/AC-LGV2SntbtW3KQ5Ztm-9U?rlkey=ookz2ga2uw6tfz23badp0bqtu&st=n2ukajdg&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/nu9s2vnvnix9ci7cpty6o/AC-LGV2SntbtW3KQ5Ztm-9U?rlkey=ookz2ga2uw6tfz23badp0bqtu&st=n2ukajdg&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.2b</td>
       <td nowrap><code>testbinary_EUR_PRS-CS_PRSCSpseudo_binary/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/wym7ksuqivjqrfugll97n/AJfYTccn61A_0MgBEcgXo_c?rlkey=9h92sgt2gfswgozd6k4auwegd&st=8c0qq4tx&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/wym7ksuqivjqrfugll97n/AJfYTccn61A_0MgBEcgXo_c?rlkey=9h92sgt2gfswgozd6k4auwegd&st=8c0qq4tx&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.2c</td>
       <td nowrap><code>testcontinuous_EUR_PRS-CS_PRSCSauto_fullyBayes_continuous/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/gdlvtcpgeqmtjzra7cnwe/AKYou2FZIsYKiG-zLUlY9p4?rlkey=e2pjr8q6w0ercnoyg2p8ub9w2&st=fieu7r6b&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/gdlvtcpgeqmtjzra7cnwe/AKYou2FZIsYKiG-zLUlY9p4?rlkey=e2pjr8q6w0ercnoyg2p8ub9w2&st=fieu7r6b&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.2d</td>
       <td nowrap><code>testbinary_EUR_PRS-CS_PRSCSauto_fullyBayes_binary/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/qf3pcwlndcb8s7nyyzxqn/AFUopXhW6xCUSNk7XCTfoDw?rlkey=nrd1wohos79mww4kkj8fioycl&st=6p45a34v&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/qf3pcwlndcb8s7nyyzxqn/AFUopXhW6xCUSNk7XCTfoDw?rlkey=nrd1wohos79mww4kkj8fioycl&st=6p45a34v&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.3a</td>
       <td nowrap><code>testcontinuous_EUR_LDpred2-auto.DBSLMM_tuningfree_continuous/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/o2xxkfqbziufdj3lxbztl/AB9Y7OZvQAz9ijhRPge0Y6k?rlkey=8tp04mqs63dwvzoz23khns4nn&st=7688vq13&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/o2xxkfqbziufdj3lxbztl/AB9Y7OZvQAz9ijhRPge0Y6k?rlkey=8tp04mqs63dwvzoz23khns4nn&st=7688vq13&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.3b</td>
       <td nowrap><code>testbinary_EUR_LDpred2-auto.DBSLMM_tuningfree_binary/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/ci7oqkjgro4rzv2g62rk9/AOK3k3Ctk3uu0O_nVP5Mn4I?rlkey=gygxxwczwpkwtw17iljvgnx0v&st=fylft36g&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/ci7oqkjgro4rzv2g62rk9/AOK3k3Ctk3uu0O_nVP5Mn4I?rlkey=gygxxwczwpkwtw17iljvgnx0v&st=fylft36g&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.4a</td>
       <td nowrap><code>testcontinuous_EUR.EAS_PRS-CSx_PRSCSXpseudo_continuous/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/y6vkg7zu11s81lx1mbtr0/AH84TzjdQbdln5z3ziWGRYE?rlkey=9jlyz58r8uy1lt0x2ciru4oep&st=de61z3ph&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/y6vkg7zu11s81lx1mbtr0/AH84TzjdQbdln5z3ziWGRYE?rlkey=9jlyz58r8uy1lt0x2ciru4oep&st=de61z3ph&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.4b</td>
       <td nowrap><code>testbinary_EUR.EAS_PRS-CSx_PRSCSxpseudo_binary/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/nkb85wo5rnfq06906xpjl/AJTEPF72001hzlVIh7hBPys?rlkey=8dgodr0hscc9qym4zsr51s6be&st=ct3vmdqm&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/nkb85wo5rnfq06906xpjl/AJTEPF72001hzlVIh7hBPys?rlkey=8dgodr0hscc9qym4zsr51s6be&st=ct3vmdqm&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.5a</td>
       <td nowrap><code>testcontinuous_EUR.EAS_MUSSEL_MUSSELpseudo_continuous/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/7aqm8dig0zpptggm37itq/ABZGD3Qm4-9cLgdigGcIjr8?rlkey=x8tm2023tdy5s6coatrltcvnl&st=snrvhgce&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/7aqm8dig0zpptggm37itq/ABZGD3Qm4-9cLgdigGcIjr8?rlkey=x8tm2023tdy5s6coatrltcvnl&st=snrvhgce&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.5b</td>
       <td nowrap><code>testbinary_EUR.EAS_MUSSEL_MUSSELpseudo_binary/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/300ytqgaiv7jen59nius9/AL7ZpsnWWerdzgtiWPCCnx8?rlkey=jj31okcf3najx0gb2j041pdye&st=0h8pqy3x&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/300ytqgaiv7jen59nius9/AL7ZpsnWWerdzgtiWPCCnx8?rlkey=jj31okcf3najx0gb2j041pdye&st=0h8pqy3x&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.6a</td>
       <td nowrap><code>testcontinuous_EUR.EAS_PROSPER_PROSPERpseudo_continuous/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/xwergagb2y77vk1hz6h7z/AKEmhVCyZiUYlYy_e4HJsyA?rlkey=4c6j6vw8qd89gc8dgywmbt4uq&st=w7heuycm&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/xwergagb2y77vk1hz6h7z/AKEmhVCyZiUYlYy_e4HJsyA?rlkey=4c6j6vw8qd89gc8dgywmbt4uq&st=w7heuycm&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.6b</td>
       <td nowrap><code>testbinary_EUR.EAS_PROSPER_PROSPERpseudo_binary/</code></td>
-      <td><a href="https://www.dropbox.com/scl/fo/d63h5pekb9oa2twmorzlb/ANV-XuGc57dZH0BHWM9b6hU?rlkey=64wm4mgelvtm2qowohujogbzs&st=g69shyu8&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/d63h5pekb9oa2twmorzlb/ANV-XuGc57dZH0BHWM9b6hU?rlkey=64wm4mgelvtm2qowohujogbzs&st=g69shyu8&dl=0">Link</a></td>
     </tr>
     <tr>
       <td>5.7</td>
       <td nowrap><code>$PennPRS/test/Evaluation/output/</code> (contains <code>evaluation_results.txt</code>)</td>
-      <td><a href="https://www.dropbox.com/scl/fo/5q29yxbt8jt4dj5u08d0d/AH3SPeQcUOggTshFAeIihzY?rlkey=n4tu29lh6w1ki026qeqk0athm&st=1378juy6&dl=0">Dropbox</a></td>
+      <td><a href="https://www.dropbox.com/scl/fo/5q29yxbt8jt4dj5u08d0d/AH3SPeQcUOggTshFAeIihzY?rlkey=n4tu29lh6w1ki026qeqk0athm&st=1378juy6&dl=0">Link</a></td>
     </tr>
   </tbody>
 </table>
