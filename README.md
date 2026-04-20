@@ -5,7 +5,9 @@
 To use the tool, please follow the instructions in **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)**.
 </br>
 
-
+A test runner configuration is provided for users to easily test the pipeline in their local environment. To conduct an automated testing, please follow the instructions in  
+[`test-runner/README.md`](./test-runner/README.md).
+</br>
 
 ## Version History
 - [ ] __April 2026:__  Fixed bugs and made the following major updates: 
@@ -13,7 +15,8 @@ To use the tool, please follow the instructions in **[the Wiki page](https://git
     * Added a new [mode](https://github.com/PennPRS/Pipeline/wiki/4.-Model-Evaluation-with-Individual%E2%80%90Level-Data) for evaluating trained PRS models based on user-provided individual-level data.<br>
     * Added a new [function](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#query-data-with-pennprs), which allows users to directly query harmonized GWAS summary datasets from the GWAS Catalog or FinnGen.<br>
     * Added [Environment setup](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#enviroment-set-up) to ensure all dependencies are available.<br>
-    * Reorganized structure of the tutorial on the [Wiki](https://github.com/PennPRS/Pipeline/wiki) page, provided a `/test/` directory for [testing](https://github.com/PennPRS/Pipeline/wiki/4.-Test-Examples) with example data and output.<br>
+    * Added a [test runner configuration](https://github.com/PennPRS/Pipeline/tree/main/test-runner) which allows users enable users to easily run and validate the pipeline in a local environment.<br>
+    * Reorganized structure of the tutorial on the [Wiki](https://github.com/PennPRS/Pipeline/wiki) page with [examples](https://github.com/PennPRS/Pipeline/wiki/4.-Test-Examples) for all supported methods.<br>
     * Updated the DBSLMM pipeline to the latest V1.0 Version, which requires downloading an additional LD folder (see [SNP information file](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#getting-started)).<br>
     
 - [ ] __November 2025:__  Updated code/Tuning-Parameter-Free.R.
