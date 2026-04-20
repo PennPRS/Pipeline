@@ -45,12 +45,17 @@ PRSdir = opt$PRSdir
 homedir = opt$homedir
 bfile = opt$bfile
 phenofile = opt$phenofile
-if (str_detect(opt$covar_col_nums, ',')) covar_col_nums = str_split(opt$covar_col_nums,",")[[1]]
-if (str_detect(opt$covar_col_nums, '-')){
-  col.ranges = as.numeric(str_split(opt$covar_col_nums,"-")[[1]])
-  covar_col_nums = col.ranges[1]:col.ranges[2]
+if (is.na(opt$covar_col_nums)) covar_col_nums = NA
+if (!is.na(opt$covar_col_nums)){
+  if (str_detect(opt$covar_col_nums, ',')){
+    covar_col_nums = as.numeric(str_split(opt$covar_col_nums,",")[[1]])
+  } 
+  if (str_detect(opt$covar_col_nums, '-')){
+    col.ranges = as.numeric(str_split(opt$covar_col_nums,"-")[[1]])
+    covar_col_nums = col.ranges[1]:col.ranges[2]
+  }
+  if (sum(opt$covar_col_nums == 'NA')>0) covar_col_nums = NA
 }
-if (sum(covar_col_nums == 'NA')>0) covar_col_nums = NA
 ID_col_num = as.numeric(str_split(opt$ID_col_num,"-")[[1]])
 pheno_col_num = as.numeric(str_split(opt$pheno_col_num,"-")[[1]])
 
