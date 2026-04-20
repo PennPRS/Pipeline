@@ -1,4 +1,0 @@
-PRS_Model	AUC (Full Model)	Incremental AUC
-EUR_testbinary.C+T.PRS	0.768	0.0387
-EUR_testbinary.lassosum2.PRS	0.796	0.0669
-EUR_testbinary.LDpred2.PRS	0.801	0.0716

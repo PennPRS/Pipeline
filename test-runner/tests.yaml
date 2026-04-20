@@ -1,0 +1,369 @@
+# ============================================================================
+# PennPRS Pipeline — Test Runner Configuration
+# ============================================================================
+# Drives worked examples 5.1 — 5.7 from
+#   https://github.com/PennPRS/Pipeline/wiki
+#
+# All tests are submitted via `sbatch`. The runner sequentially submits jobs
+# with `sbatch --wait` by default; pass `--parallel N` to `run_all.sh` to
+# queue up to N jobs at once.
+#
+# Each test has a unique `id` (used on the command line) and a unique
+# `submissionID` (used by PennPRS to name its output folder). The verifier
+# uses `submissionID` to locate the output folder after the job completes,
+# so naming-convention changes in the pipeline do not break verification.
+# ============================================================================
+
+globals:
+  # Path to the cloned https://github.com/PennPRS/Pipeline checkout.
+  PennPRS_path: /scratch/bell/bingxin/PennPRS/revision/PennPRS/
+
+  # Output folders (per-wiki conventions).
+  homedir:         ${PennPRS_path}/test/PennPRSoutput/
+  eval_homedir:    ${PennPRS_path}/test/Evaluation/output/
+  input_GWAS_path: ${PennPRS_path}/test/inputGWAS/
+
+  # Evaluation inputs.
+  eval_phenofile:  ${PennPRS_path}/test/Evaluation/pheno/pheno.txt
+  eval_bfile:      ${PennPRS_path}/test/Evaluation/geno/validation
+  eval_PRSdir:     ${PennPRS_path}/test/Evaluation/PRSdir/
+
+  # SLURM defaults — override per-test under `slurm:` if needed.
+  slurm:
+    partition: cpu
+    qos: normal
+    nodes: 11
+    ntasks: 1
+
+# ============================================================================
+# Test matrix
+# ============================================================================
+# Runtime/memory figures are taken from the wiki's Test Examples table and
+# are based on the bundled inputs on a mid-range Intel Xeon. Override if
+# your cluster differs.
+# ============================================================================
+
+tests:
+
+  # ---- 5.1 Single-Ancestry Pseudo-Training ---------------------------------
+  - id: "5.1a"
+    section: "5.1"
+    name: "Single-Ancestry Pseudo-Training — EUR, continuous (C+T, lassosum2, LDpred2-pseudo)"
+    script: test/job_submission/SA-Pseudo.sh
+    submissionID: SApseudo_continuous
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - SApseudo_continuous              # submissionID
+      - "C+T,lassosum2,LDpred2"   # methods
+      - testcontinuous                   # trait
+      - EUR                              # race
+      - "TRUE"                           # ensemble
+      - "11"                              # NCORES
+    slurm: { time: "02:00:00", cpus: 11, mem_per_cpu: 1000M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 3        # one per method
+      weight_glob: "*.txt"
+
+  - id: "5.1b"
+    section: "5.1"
+    name: "Single-Ancestry Pseudo-Training — EUR, binary"
+    script: test/job_submission/SA-Pseudo.sh
+    submissionID: SApseudo_binary
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - SApseudo_binary
+      - "C+T,lassosum2,LDpred2"
+      - testbinary
+      - EUR
+      - "TRUE"
+      - "11"
+    slurm: { time: "02:00:00", cpus: 11, mem_per_cpu: 1000M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 3
+      weight_glob: "*.txt"
+
+  # ---- 5.2 Single-Ancestry PRS-CS ------------------------------------------
+  - id: "5.2a"
+    section: "5.2"
+    name: "Single-Ancestry PRS-CS (grid) — EUR, continuous"
+    script: test/job_submission/PRS-CS.sh
+    submissionID: PRSCSpseudo_continuous
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - PRSCSpseudo_continuous
+      - testcontinuous
+      - EUR
+      - "11"      # N_THREADS  (PRS-CS runs one chain per chromosome)
+      - grid      # type: auto | grid
+      - "1e-4,1e-6"      # phi values
+    slurm: { time: "04:00:00", cpus: 11, mem_per_cpu: 1500M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 1
+      weight_glob: "*.txt"
+
+  - id: "5.2b"
+    section: "5.2"
+    name: "Single-Ancestry PRS-CS (grid) — EUR, binary"
+    script: test/job_submission/PRS-CS.sh
+    submissionID: PRSCSpseudo_binary
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - PRSCSpseudo_binary
+      - testbinary
+      - EUR
+      - "11"
+      - grid
+      - "1e-4,1e-6"
+    slurm: { time: "04:00:00", cpus: 11, mem_per_cpu: 1500M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 1
+      weight_glob: "*.txt"
+
+
+  - id: "5.2c"
+    section: "5.2"
+    name: "Single-Ancestry PRS-CS (auto) — EUR, continuous"
+    script: test/job_submission/PRS-CS.sh
+    submissionID: PRSCSauto_fullyBayes_continuous
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - PRSCSauto_fullyBayes_continuous
+      - testcontinuous
+      - EUR
+      - "11"
+      - auto      # type: auto | grid
+      - "NA"      # phi values, no need to specify
+    slurm: { time: "04:00:00", cpus: 11, mem_per_cpu: 1500M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 1
+      weight_glob: "*.txt"
+
+  - id: "5.2d"
+    section: "5.2"
+    name: "Single-Ancestry PRS-CS (auto) — EUR, binary"
+    script: test/job_submission/PRS-CS.sh
+    submissionID: PRSCSauto_fullyBayes_binary
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - PRSCSauto_fullyBayes_binary
+      - testbinary
+      - EUR
+      - "11"
+      - auto
+      - "NA"      # phi values, no need to specify
+    slurm: { time: "04:00:00", cpus: 11, mem_per_cpu: 1500M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 1
+      weight_glob: "*.txt"
+
+
+  # ---- 5.3 Single-Ancestry Tuning-Parameter-Free ------------------
+  - id: "5.3a"
+    section: "5.3"
+    name: "Single-Ancestry Tuning-Parameter-Free — EUR, continuous"
+    script: test/job_submission/Tuning-Parameter-Free.sh
+    submissionID: tuningfree_continuous
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - tuningfree_continuous
+      - "LDpred2-auto,DBSLMM"
+      - testcontinuous
+      - EUR
+      - "11"
+    slurm: { time: "02:00:00", cpus: 11, mem_per_cpu: 1000M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 1
+      weight_glob: "*.txt"
+
+  - id: "5.3b"
+    section: "5.3"
+    name: "Single-Ancestry Tuning-Parameter-Free — EUR, binary"
+    script: test/job_submission/Tuning-Parameter-Free.sh
+    submissionID: tuningfree_binary
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - tuningfree_binary
+      - "LDpred2-auto,DBSLMM"
+      - testbinary
+      - EUR
+      - "11"
+    slurm: { time: "02:00:00", cpus: 11, mem_per_cpu: 1000M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 1
+      weight_glob: "*.txt"
+      
+
+      
+  # ---- 5.4 PRS-CSx-pseudo (multi-ancestry) ---------------------------------
+  - id: "5.4a"
+    section: "5.4"
+    name: "PRS-CSx-pseudo — EUR+EAS, continuous"
+    script: test/job_submission/PRS-CSx.sh
+    submissionID: PRSCSXpseudo_continuous
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - PRSCSXpseudo_continuous
+      - PRS-CSx
+      - testcontinuous
+      - "EUR,EAS"      # races
+      - "11"           # N_THREADS
+      - "1e-4,1e-6"    # phi
+    slurm: { time: "12:00:00", cpus: 11, mem_per_cpu: 2000M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 2       # one per ancestry
+      weight_glob: "*.txt"
+
+  - id: "5.4b"
+    section: "5.4"
+    name: "PRS-CSx-pseudo — EUR+EAS, binary"
+    script: test/job_submission/PRS-CSx.sh
+    submissionID: PRSCSxpseudo_binary
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - PRSCSxpseudo_binary
+      - PRS-CSx
+      - testbinary
+      - "EUR,EAS"      # races
+      - "11"           # N_THREADS
+      - "1e-4,1e-6"    # phi
+    slurm: { time: "12:00:00", cpus: 11, mem_per_cpu: 2000M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 2
+      weight_glob: "*.txt"
+
+  # ---- 5.5 MUSSEL-pseudo ---------------------------------------------------
+  - id: "5.5a"
+    section: "5.5"
+    name: "MUSSEL-pseudo — EUR+EAS, continuous"
+    script: test/job_submission/MUSSEL.sh
+    submissionID: MUSSELpseudo_continuous
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - MUSSELpseudo_continuous
+      - MUSSEL
+      - testcontinuous
+      - "EUR,EAS"
+      - "11"
+    slurm: { time: "10:00:00", cpus: 11, mem_per_cpu: 2000M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 2
+      weight_glob: "*.txt"
+
+  - id: "5.5b"
+    section: "5.5"
+    name: "MUSSEL-pseudo — EUR+EAS, binary"
+    script: test/job_submission/MUSSEL.sh
+    submissionID: MUSSELpseudo_binary
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - MUSSELpseudo_binary
+      - MUSSEL
+      - testbinary
+      - "EUR,EAS"
+      - "11"
+    slurm: { time: "10:00:00", cpus: 11, mem_per_cpu: 2000M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 2
+      weight_glob: "*.txt"
+
+  # ---- 5.6 PROSPER-pseudo --------------------------------------------------
+  - id: "5.6a"
+    section: "5.6"
+    name: "PROSPER-pseudo — EUR+EAS, continuous"
+    script: test/job_submission/PROSPER.sh
+    submissionID: PROSPERpseudo_continuous
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - PROSPERpseudo_continuous
+      - PROSPER
+      - testcontinuous
+      - "EUR,EAS"
+      - "11"
+    slurm: { time: "10:00:00", cpus: 11, mem_per_cpu: 2000M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 2
+      weight_glob: "*.txt"
+
+  - id: "5.6b"
+    section: "5.6"
+    name: "PROSPER-pseudo — EUR+EAS, binary"
+    script: test/job_submission/PROSPER.sh
+    submissionID: PROSPERpseudo_binary
+    args:
+      - ${PennPRS_path}
+      - ${homedir}
+      - ${input_GWAS_path}
+      - PROSPERpseudo_binary
+      - PROSPER
+      - testbinary
+      - "EUR,EAS"
+      - "11"
+    slurm: { time: "10:00:00", cpus: 11, mem_per_cpu: 2000M }
+    expect:
+      base: ${homedir}
+      min_weight_files: 2
+      weight_glob: "*.txt"
+
+
+  # ---- 5.7 Evaluation with Individual-Level Data ---------------------------
+  - id: "5.7"
+    section: "5.7"
+    name: "Evaluation with Individual-Level Data"
+    script: test/job_submission/Evaluation.sh
+    submissionID: Evaluation
+    # argument order per wiki:
+    #   PennPRS_path  ID_col  pheno_col  covar_col_nums  homedir  phenofile  bfile  PRSdir
+    args:
+      - ${PennPRS_path}
+      - ${eval_homedir}
+      - ${eval_phenofile}
+      - ${eval_bfile}
+      - ${eval_PRSdir}
+      - "1"                   # ID_col_num
+      - "2"                   # pheno_col_num
+      - "3-44"                # covar_col_nums (42 covariates)
+    slurm: { time: "00:30:00", cpus: 1, mem_per_cpu: 5000M }
+    expect:
+      # Evaluation writes directly into eval_homedir; the verifier expects
+      # evaluation_results.txt to be present with >= 1 data row.
+      dir: ${eval_homedir}
+      required_file: evaluation_results.txt

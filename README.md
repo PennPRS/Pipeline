@@ -220,6 +220,34 @@ sbatch test/job_submission/Evaluation.sh ${PennPRS_path} ${homedir} ${phenofile}
 
 
 
+## Automated Testing
+
+A SLURM-driven test harness for the worked examples in [Wiki § 5. Test Examples](https://github.com/PennPRS/Pipeline/wiki/5.-Test-Examples)
+is provided under [`test-runner/`](./test-runner). The harness submits each example (5.1 – 5.7) via `sbatch`, monitors job completion, and verifies that
+the expected output artifacts (per-method weight files, evaluation results, PLINK2 `.sscore` files) are produced and non-empty. This enables end-to-end
+regression testing of the pipeline on any SLURM-managed cluster.
+
+Typical usage:
+
+```bash
+cd test-runner
+./run_all.sh --list               # enumerate configured tests
+./run_all.sh --only 5.1a          # run a single example
+./run_all.sh --parallel 4         # run all examples, up to 4 concurrently
+```
+
+Configuration (cluster paths, partitions, wall-time, memory) is centralized
+in [`test-runner/tests.yaml`](./test-runner/tests.yaml). 
+
+To conduct an automated pipeline testing, please go to 
+[`test-runner/README.md`](./test-runner/README.md) for full setup
+instructions, the complete test matrix, details of the verification
+model, and test examples.
+
+
+
+
+
 
 ## Demo and Memory & Runtime Information
 We have provided example GWAS summary datasets and the corresponding outputs can be found in Sections 2.1 - 2.4 in **[the Wiki page](https://github.com/PennPRS/Pipeline/wiki)**.
