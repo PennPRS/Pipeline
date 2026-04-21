@@ -1,16 +1,15 @@
 # PennPRS Test Runner
 
-A SLURM-driven harness that submits the wiki's worked examples
+A SLURM-driven harness that submits test jobs for the worked examples we provided in
 ([Test Examples 5.1 – 5.7](https://github.com/PennPRS/Pipeline/wiki/5.-Test-Examples))
-against a local clone of [PennPRS/Pipeline](https://github.com/PennPRS/Pipeline)
-and verifies each job produced sensible outputs.
+against a local clone of [PennPRS/Pipeline](https://github.com/PennPRS/Pipeline).
 
 ## Layout
 
 ```
 test-runner/
 ├── run_all.sh           # orchestrator
-├── tests.yaml           # test matrix — edit here to add / tweak tests
+├── tests.yaml           # test matrix — edit here to tweak tests
 ├── lib/
 │   ├── common.sh        # logging + yq detection + ${VAR} expansion
 │   ├── parse.sh         # YAML → bash record files
@@ -23,7 +22,7 @@ test-runner/
 
 Before running the test, please follow the instructions on [pipeline installation](https://github.com/PennPRS/Pipeline/wiki/1.-Installation) and ensure the following steps are completed:
 
-1. LD and supported file downloads: make sure that the LD information for EUR and EAS were successfully downloaded and saved in `PennPRS/LD`.
+1. LD and supported file download: make sure the LD information for EUR and EAS were successfully downloaded and saved in `PennPRS/LD/`.
 2. Environment setup
 
 If needed, please modify the command `module load r` and `module load anaconda` in all the job submission scripts (.sh files) in `test/job_submission/` to match the module configuration on your server.
@@ -35,7 +34,7 @@ module avail
 
 ## Requirements
 
-- A SLURM cluster (the runner submits every example with `sbatch`).
+- A SLURM cluster (the runner submits every example with `sbatch`). If you use other types of clusters (e.g., bsub, qsub), please adjust job submission command accordingly (see [Setup](https://github.com/PennPRS/Pipeline/tree/main/test-runner#setup))
 - `yq` — either [mikefarah/yq](https://github.com/mikefarah/yq) (Go) or
   [kislyuk/yq](https://github.com/kislyuk/yq) (Python). Install with
   any of:
@@ -46,9 +45,7 @@ module avail
      # or download a binary from the mikefarah/yq releases page
   ```
 - The pipeline itself, installed following
-  [wiki § 1.-Installation](https://github.com/PennPRS/Pipeline/wiki/1.-Installation),
-  with `module load r` (or the cluster equivalent) available inside each
-  `.sh` script under `test/job_submission/`.
+  [wiki § 1.-Installation](https://github.com/PennPRS/Pipeline/wiki/1.-Installation).
 
 
 ## Setup
@@ -61,17 +58,20 @@ module avail
      cluster is faster or tighter on memory than the wiki's reference
      (mid-range Intel Xeon).
 
-3. The job submission command may vary depending on your computing environment or scheduler. Please modify job submission 
-command in `sbatch_args` (line 39 in `test-runner/lib/submit.sh`) as needed for your server. For example, replace `myaccount` in `test-runner/lib/submit.sh`, with your own account name on your server.
+2. Please modify the command `module load r` and `module load anaconda`) inside each
+  `.sh` script under `$test/job_submission/` to match the module configuration on your server.
+  
+3. The job submission command may vary depending on your computing environment or scheduler. Please modify the  
+command in `sbatch_args` (line 39 in `test-runner/lib/submit.sh`) as needed for your server. For example, replace `myaccount` in `test-runner/lib/submit.sh`, with your own account name.
 
     
 
-## Usage
+**Usage**
 
 ```bash
 cd test-runner/
 
-# Run all examples sequentially (default).
+# Run all examples sequentially.
 ./run_all.sh
 
 # Run all examples, submit up to 4 jobs at once (uses sbatch without --wait; polls squeue).
@@ -101,7 +101,7 @@ cd test-runner/
 - `2` — invalid invocation.
 
 
-## Test matrix
+**Test matrix**
 
 | ID    | Section | Description                                         | CPUs | Mem / cpu | Wall-time |
 | :---- | :------ | :-------------------------------------------------- | :--: | :-------: | :-------: |
@@ -123,7 +123,7 @@ cd test-runner/
 
 
 
-## Outputs
+**Outputs**
 
 Each test has:
 
@@ -144,25 +144,24 @@ A terminal summary is printed at the end of `run_all.sh`.
 
 ## Test examples 
 
-To test examples in wiki across all supported methods and modes, recommend running single tests on each category:
+To test examples in [wiki](https://github.com/PennPRS/Pipeline/wiki/5.-Test-Examples) across all supported methods and modes, recommend running single tests on each category:
 
 ```
 bash
 cd test-runner/
 
-# You can run all examples sequentially
-./run_all.sh
-
-# Or run all examples, submit up to 4 jobs at once, which takes approximately 1.5 - 3 hours to complete.
+# Run all examples in parallel (recommended), which submits up to 4 jobs at once, takes approximately 2 - 3 hours to complete.
 ./run_all.sh --parallel 4
+
+# Or run all examples sequentially, takes approximately 8 hours to complete.
+./run_all.sh
 ```
 
 ### Test Example Outputs
 
-Reference outputs for every test case are archived on Dropbox.
+Reference outputs for all test cases are provided on [Dropbox](https://www.dropbox.com/scl/fo/84rvif06ffausgkczorpw/AELVtRppWb5ewlVp1Hf7U0o?rlkey=beavrxi18raym5w2j920j74ve&st=a3dosg5n&dl=0).
 
-After running
-the harness, you can compare your local results (located in `$PennPRS_path/test/PennPRSoutput/`) against these to confirm
+The output folder for every test case in 5.1 - 5.6 will be saved in `$PennPRS_path/test/PennPRSoutput/`; the output for test 5.7 will be saved in `$PennPRS_path/test/Evaluation/output/`. After running the tests, you can compare your local results against these to confirm
 correctness.
 
 <table>

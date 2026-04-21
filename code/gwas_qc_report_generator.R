@@ -330,17 +330,24 @@ write_QC_report <- function(ancestries, trait, temp_path, workdir, PennPRS_path)
       write_line(paste0("Input file: ", file.nm1))
       write_line(paste0("Total # of input variants: ", fmt_num(n_input)))
       
-      # ----------------------------
-      # (1) Remove irrelevant columns with too many NA values:
-      # ----------------------------
+      # # ----------------------------
+      # # (0) Remove irrelevant columns with too many NA values:
+      # # ----------------------------
+      # 
+      # p.missing <- 0.2
+      # write_subsection(paste0("(0) Remove irrelevant columns with more than ", p.missing, " columns having NA/NaN values"))
+      # na_frac_by_col <- sapply(sumraw, function(x) mean(is.na(x)))
+      # cols_remove_high_na <- names(na_frac_by_col)[na_frac_by_col > p.missing]
+      # n_cols_remove_high_na <- length(cols_remove_high_na)
+      # if (n_cols_remove_high_na == 0) {
+      #   write_line("  - No columns with >20% rows having NA/NaN values were detected.")
+      # } else {
+      #   sumraw <- sumraw[, !(colnames(sumraw) %in% cols_remove_high_na), drop = FALSE]
+      #   write_line(paste0("  - ", n_cols_remove_high_na, " columns with >", paste0(100 * p.missing, "%"), " rows having NA/NaN values were removed."))
+      #   write_line(paste0("  - Removed columns: ", paste(cols_remove_high_na, collapse = ", ")))
+      #   write_line(paste0("  - Columns remaining after this step: ", ncol(sumraw)))
+      # }
       
-      p.missing <- 0.2
-      write_subsection(paste0("(0) Remove irrelevant columns with more than ", p.missing, " columns having NA/NaN values"))
-      na_frac <- sapply(sumraw, function(x) mean(is.na(x) | is.nan(x)))
-      cols_remove <- names(na_frac[na_frac > p.missing])
-      sumraw <- sumraw[, na_frac <= p.missing, drop = FALSE]
-      if (length(cols_remove) > 0) write_line(paste0("  - Column '", original_name, "' detected for chromosome information."))
-      cols_remove
       
       # ----------------------------
       # (1) Check required GWAS column names

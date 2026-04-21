@@ -15,7 +15,8 @@ A test runner configuration is provided for users to easily test the pipeline in
     * Added a new [function](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#query-data-with-pennprs), which allows users to directly query harmonized GWAS summary datasets from the GWAS Catalog or FinnGen.<br>
     * Added [Environment setup](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#enviroment-set-up) to ensure all dependencies are available.<br>
     * Added a [test runner configuration](https://github.com/PennPRS/Pipeline/tree/main/test-runner) which allows users enable users to easily run and validate the pipeline in a local environment.<br>
-    * Reorganized structure of the tutorial on the wiki page with [examples](https://github.com/PennPRS/Pipeline/wiki/4.-Test-Examples) for all supported methods.<br>
+    * Refined QC report post-processing report
+    * Reorganized the tutorial on the wiki page with [examples](https://github.com/PennPRS/Pipeline/wiki/4.-Test-Examples) for all supported methods.<br>
     * Updated the DBSLMM pipeline to the latest V1.0 Version, which requires downloading an additional LD folder (see [instructions](https://github.com/PennPRS/Pipeline?tab=readme-ov-file#getting-started)).<br>
     
 - [ ] __November 2025:__  Updated code/Tuning-Parameter-Free.R.
