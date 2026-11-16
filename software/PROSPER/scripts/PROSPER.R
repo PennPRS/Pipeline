@@ -297,9 +297,11 @@ for (j in 1:length(allchrom)){
       # print(paste0('m=',m))
       # print(paste('dimensions:'), nrow(LD_list0[[l]][[bl]]), ncol(LD_list0[[l]][[bl]]))
       if (sum(!is.na(m)) > 0){
-        m1 <- as.matrix(LD_list0[[l]][[bl]][m,m]); 
+        m1 <- as.matrix(LD_list0[[l]][[bl]][m,m])
         m1[is.na(m1)] <- 0; diag(m1)[is.na(m)] <- 1; LD_list_tmp[[l]] <- m1
-      } 
+      } else {
+        LD_list_tmp[[l]] <- diag(Nsnps1[bl])   # if all missing, set to identity matrix
+      }
     }
     indx1[[bl]] <- indx_tmp
     summ_list1[[bl]] <- summ_list_tmp

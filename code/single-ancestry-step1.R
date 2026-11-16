@@ -145,6 +145,11 @@ if ('LDpred2' %in% methods){
   sparse.option = ifelse(sp.temp == 'TRUE', TRUE, FALSE) # opt$sparse # If TRUE: generate sparse effect size estimates. Options: subset of {FALSE, TRUE}
 }
 
+neighbors_in_block <- function(idx, block, n.total) {
+  nb <- c(idx - 1, idx + 1)
+  nb <- nb[nb >= 1 & nb <= n.total]
+  nb[(nb - 1) %/% block == (idx - 1) %/% block]
+}
 
 #source(paste0(PUMAS_path, 'PennPRS_functions.R')) # please save the PennPRS_functions.R file to the /PUMAS/code/ directory
 source(paste0(PUMAS_path, 'gwas_qc_report_generator.R'))
@@ -559,7 +564,17 @@ if ('lassosum2' %in% methods){
   # Select the top parameter settings:
   # params.tuned = as.numeric(substr(names(sort(r2.avg, decreasing = T)[1:5]), 5, 10))
   params.tuned = Reduce(intersect, r2.order)
+  
   nonzero.indx = which(r2.avg != 0)
+  r2.inflated = colSums(r2 > 0.99)                         
+  zero.ones   = which(r2.avg == 0)
+  # problematic = unique(c(zero.ones, zero.ones - 1, zero.ones + 1, which(r2.inflated > 0)))
+  # Only removing problematic grids within each parameter block:
+  nb.zero     = unlist(lapply(zero.ones, neighbors_in_block, block = nlambda, n.total = length(r2.avg)))
+  problematic = unique(c(zero.ones, nb.zero, which(r2.inflated > 0)))
+  problematic = problematic[problematic > 0 & problematic <= length(r2.avg)]
+  params.tuned = setdiff(params.tuned, problematic)
+  
   params.tuned = unique(params.tuned[(params.tuned <= length(r2.avg)) & (params.tuned %in% nonzero.indx)])
   # print(paste0('Maximum r2 of ',method,': ', max(r2.avg)))
   tuned.parameters.file = paste0(workdir, 'PRS_model_training/',method,'/tuned_parameters_',trait_name,'.RData')
@@ -639,12 +654,19 @@ if ('LDpred2' %in% methods){
   r2.order = list()
   n.candidates = 20
   for (kk in 1:k) r2.order[[kk]] = order(as.numeric(r2[kk,]),decreasing = T)[1:n.candidates]
-  # Select the top parameter settings:
-  # params.tuned = as.numeric(substr(names(sort(r2.avg, decreasing = T)[1:5]), 5, 10))
   params.tuned = Reduce(intersect, r2.order)
+  
+  r2.inflated = colSums(r2 > 0.99)                         
+  zero.ones   = which(r2.avg == 0)
+  # problematic = unique(c(zero.ones, zero.ones - 1, zero.ones + 1, which(r2.inflated > 0)))
+  # Only removing problematic grids within each parameter block:
+  nb.zero     = unlist(lapply(zero.ones, neighbors_in_block, block = length(p_seq), n.total = length(r2.avg)))
+  problematic = unique(c(zero.ones, nb.zero, which(r2.inflated > 0)))
+  problematic = problematic[problematic > 0 & problematic <= length(r2.avg)]
+  params.tuned = setdiff(params.tuned, problematic)
+  
   nonzero.indx = which(r2.avg != 0)
   params.tuned = unique(params.tuned[(params.tuned <= length(r2.avg)) & (params.tuned %in% nonzero.indx)])
-  # print(paste0('Maximum r2 of ',method,': ', max(r2.avg)))
   tuned.parameters.file = paste0(workdir,'PRS_model_training/',method,'/tuned_parameters_',trait_name,'.RData')
   save(params.tuned, file = tuned.parameters.file)
   if (length(params.tuned) == 0){
@@ -655,7 +677,6 @@ if ('LDpred2' %in% methods){
     n.candidates = length(nonzero.indx)
     for (kk in 1:k) r2.order[[kk]] = order(as.numeric(r2[kk, nonzero.indx]),decreasing = T)[1:n.candidates]
     # Select the top parameter settings:
-    # params.tuned = as.numeric(substr(names(sort(r2.avg, decreasing = T)[1:5]), 5, 10))
     params.tuned = Reduce(intersect, r2.order)
     params.tuned = nonzero.indx[params.tuned[!is.na(params.tuned)]]
     params.tuned = unique(params.tuned[(params.tuned <= length(r2.avg)) & (params.tuned %in% nonzero.indx)])
@@ -870,40 +891,44 @@ if (('lassosum2' %in% methods) | ('LDpred2' %in% methods)){
       nonzero.indx = which(sapply(train.indx.lassosum2, function(x){sum(abs(beta_lassosum2[,x])>1e-7)>0}))
       if (length(nonzero.indx) > 0){
         if (length(nonzero.indx) == 1) {
-          indx.temp = ii = 1; optimal.indx = params.tuned
+          indx.temp = ii = 1; optimal.indx = params.tuned[nonzero.indx]
         }
         if (length(nonzero.indx) > 1) {
           candidates = params.tuned[nonzero.indx]
-          stop = 0; ii = 0
-          while ((stop == 0) & (ii < length(candidates))){
-            ii = ii + 1
-            if (((candidates[ii]-1) %in% candidates) | ((candidates[ii]+1) %in% candidates)){
-              stop = 1
-            }
-          }
-          if (stop == 0){
-            ii = 1
-          }
+          # Analyze with blocks:
+          n.grid = nlambda * length(as.numeric(str_split(opt$delta, ",")[[1]]))
+          has.nb = sapply(candidates, function(cc) any(neighbors_in_block(cc, nlambda, n.grid) %in% candidates))
+          ii = if (any(has.nb)) which(has.nb)[1] else 1
+          # stop = 0; ii = 0
+          # while ((stop == 0) & (ii < length(candidates))){
+          #   ii = ii + 1
+          #   if (((candidates[ii]-1) %in% candidates) | ((candidates[ii]+1) %in% candidates)){
+          #     stop = 1
+          #   }
+          # }
+          # if (stop == 0){
+          #   ii = 1
+          # }
+          
           optimal.indx = candidates[ii]
           indx.temp = ii
         }
         save(optimal.indx, file = paste0(prsdir, trait_name, '.', method, '.optimal.indx.RData'))
         lassosum2.out = signif(params.lassosum2.reduced[train.indx.lassosum2[nonzero.indx][indx.temp],], 4)
         write_delim(lassosum2.out, paste0(PennPRS_finalresults_path, trait_name,'.',method,'.optimal_params.txt'))
-        beta_lassosum2 = data.frame(df_beta[,c('chr','rsid','a0','a1')], beta_lassosum2[,train.indx.lassosum2[nonzero.indx][indx.temp]], delim = '\t')
+        beta_lassosum2 = data.frame(df_beta[,c('chr','rsid','a0','a1')], beta_lassosum2[,train.indx.lassosum2[nonzero.indx][indx.temp]])
         colnames(beta_lassosum2) = c('CHR','SNP','A1','A2', 'BETA')
         
         nonzero = (sum(beta_lassosum2$BETA!=0)>0)
         if (nonzero){
-          # prs_lassosum2_archivefile = paste0(PennPRS_finalresults_path, trait_name,'.',method,'.PRS.fullversion.txt')
-          # write_delim(beta_lassosum2, file = prs_lassosum2_archivefile, delim='\t')
           # Remove SNPs with zero effects:
           beta_lassosum2.out = beta_lassosum2[beta_lassosum2$BETA != 0,]
           prs_lassosum2_outputfile = paste0(PennPRS_finalresults_path, trait_name,'.',method,'.PRS.txt')
           write_delim(beta_lassosum2.out, prs_lassosum2_outputfile, delim = '\t')
           print(paste0('Optimal parameter setting: '))
-          print(paste0('Delta: ', signif(params.lassosum2[nonzero.indx[indx.temp],'delta'], digits = 3)))
-          print(paste0('Lambda: ', signif(params.lassosum2[nonzero.indx[indx.temp],'lambda'], digits = 3)))
+          sel = train.indx.lassosum2[nonzero.indx][indx.temp]
+          print(paste0('Delta: ', signif(params.lassosum2.reduced[sel, 'delta'], digits = 3)))
+          print(paste0('Lambda: ', signif(params.lassosum2.reduced[sel, 'lambda'], digits = 3)))
           print(paste0('Complete training ', method))
           
           if (r2.avg[optimal.indx] <= 0){
@@ -929,7 +954,7 @@ if (('lassosum2' %in% methods) | ('LDpred2' %in% methods)){
         }
       }
       if (length(nonzero.indx) == 0){
-        err.lassosum2 = 0
+        err.lassosum2 = 2
         if (ensemble){
           ensemble.methods = ensemble.methods[which(ensemble.methods != method)]
           print(paste0('Trained PRS model based on ', method, ' has zero effect estimate for all SNPs (potentially due to convergence issues) and thus we will not incorporate it in the ensemble PRS. Please consider other methods.'))
@@ -976,20 +1001,23 @@ if (('lassosum2' %in% methods) | ('LDpred2' %in% methods)){
       nonzero.indx = which(sapply(1:ncol(beta_ldpred2), function(x){sum(abs(beta_ldpred2[,x])>1e-10)>0}))
       if (length(nonzero.indx) > 0){
         if (length(nonzero.indx) == 1) {
-          ii = 1; optimal.indx = params.tuned
+          indx.temp = ii = 1; optimal.indx = params.tuned[nonzero.indx]
         }
         if (length(nonzero.indx) > 1) {
           candidates = params.tuned[nonzero.indx]
-          stop = 0; ii = 0
-          while ((stop == 0) & (ii < length(candidates))){
-            ii = ii + 1
-            if (((candidates[ii]-1) %in% candidates) | ((candidates[ii]+1) %in% candidates)){
-              stop = 1
-            }
-          }
-          if (stop == 0){
-            ii = 1
-          }
+          # Analyze with blocks:
+          has.nb = sapply(candidates, function(cc) any(neighbors_in_block(cc, length(p_seq), nrow(params.ldpred2.train)) %in% candidates))
+          ii = if (any(has.nb)) which(has.nb)[1] else 1
+          # stop = 0; ii = 0
+          # while ((stop == 0) & (ii < length(candidates))){
+          #   ii = ii + 1
+          #   if (((candidates[ii]-1) %in% candidates) | ((candidates[ii]+1) %in% candidates)){
+          #     stop = 1
+          #   }
+          # }
+          # if (stop == 0){
+          #   ii = 1
+          # }
           optimal.indx = candidates[ii]
           indx.temp = ii
         }
@@ -1007,12 +1035,10 @@ if (('lassosum2' %in% methods) | ('LDpred2' %in% methods)){
         
         nonzero = (sum(beta_ldpred2[,'BETA']!=0)>0)
         if (nonzero){
-          # prs_ldpred2_archivefile = paste0(PennPRS_finalresults_path, trait_name,'.',method,'.PRS.fullversion.txt')
-          # write_delim(beta_ldpred2, file = prs_ldpred2_archivefile, delim='\t')
           # Remove SNPs with zero effects:
           beta_ldpred2.out = beta_ldpred2[beta_ldpred2$BETA != 0,]
           prs_ldpred2_outputfile = paste0(PennPRS_finalresults_path, trait_name,'.',method,'.PRS.txt')
-          write_delim(beta_ldpred2.out, prs_ldpred2_outputfile)
+          write_delim(beta_ldpred2.out, prs_ldpred2_outputfile, delim = '\t')
           print(paste0('Optimal parameter setting: '))
           print(paste0('p: ', signif(params.ldpred2.reduced[nonzero.indx[indx.temp],'p'], digits = 3)))
           print(paste0('h2: ', signif(params.ldpred2.reduced[nonzero.indx[indx.temp],'h2'], digits = 3)))
